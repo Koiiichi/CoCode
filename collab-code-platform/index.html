@@ -1,16 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
   <title>Collaborative Code Editor</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>Collaborative Code Editor</h1>
-  <div id="editor"></div>
+
+  <!-- User Authentication Section -->
+  <div id="auth-section">
+    <h2>Login</h2>
+    <form id="login-form">
+      <input type="email" id="login-email" placeholder="Email" required />
+      <input type="password" id="login-password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+
+    <h2>Sign Up</h2>
+    <form id="signup-form">
+      <input type="email" id="signup-email" placeholder="Email" required />
+      <input type="password" id="signup-password" placeholder="Password" required />
+      <button type="submit">Sign Up</button>
+    </form>
+  </div>
+
+  <!-- Code Editor -->
+  <div id="editor" style="display: none;"></div>
+
+   <!-- Logout Button (initially hidden if no user logged in) -->
+   <button id="logout-button" style="display: none;">Logout</button>
+
+  <!-- Monaco Editor Loader -->
   <script src="monaco-editor/min/vs/loader.js"></script>
-  <script src="script.js"></script>
+
+  <!-- Main Application Script -->
+  <script type="module" src="script.js"></script>
 </body>
 </html>
-
