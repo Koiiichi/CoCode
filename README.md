@@ -28,5 +28,3 @@ Contributions are welcome. Please submit pull requests or open issues to suggest
 
 ## License
 This project is licensed under the MIT License.
-
-### Roadmap
