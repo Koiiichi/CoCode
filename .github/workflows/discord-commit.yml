@@ -13,8 +13,18 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
+          set -e  # Stop execution if any command fails
+          
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "Error: DISCORD_WEBHOOK_URL is not set."
+            exit 1
+          fi
+
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d '{"content": "New commit pushed: '${{ github.event.head_commit.message }}' by '${{ github.actor }}'"}' \
+               -d '{
+                    "content": "New commit pushed:\n\nMessage: ${{ github.event.head_commit.message }}\nAuthor: ${{ github.actor }}"
+                   }' \
                "$DISCORD_WEBHOOK_URL"
+
 
