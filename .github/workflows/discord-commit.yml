@@ -23,8 +23,9 @@ jobs:
             exit 1
           fi
 
-          # Aggregate commit messages from all commits in the push event
-          COMMIT_MESSAGES=$(echo "${{ join(github.event.commits.*.message, "\n") }}" | jq -Rsa .)
+          # Aggregate commit messages from all commits in the push event using a placeholder delimiter
+          COMMIT_MESSAGES_RAW="${{ join(github.event.commits.*.message, '||') }}"
+          COMMIT_MESSAGES=$(echo "$COMMIT_MESSAGES_RAW" | sed 's/||/'$'\n/g' | jq -Rsa .)
           COMMIT_AUTHOR="${{ github.actor }}"
           BRANCH_NAME="${{ github.ref_name }}"
 
