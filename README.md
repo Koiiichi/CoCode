@@ -1,7 +1,7 @@
-# Kōdo - A Collab-Code-Platform
+# CoCode - A Collab-Code-Platform
 
 ## Overview
-Kōdo is a real-time collaborative coding environment designed to facilitate seamless multi-user code editing, debugging, and execution within a shared workspace. Inspired by Google Docs, the platform enables multiple users to work on the same coding project simultaneously, with live cursor tracking, synchronized edits, and in-editor commenting.
+CoCode is a real-time collaborative coding environment designed to facilitate seamless multi-user code editing, debugging, and execution within a shared workspace. Inspired by Google Docs, the platform enables multiple users to work on the same coding project simultaneously, with live cursor tracking, synchronized edits, and in-editor commenting.
 
 ## Features
 
@@ -22,24 +22,6 @@ Kōdo is a real-time collaborative coding environment designed to facilitate sea
 
 - **AI-Powered Coding Assistance** (Future Implementation)
   - GPT-based code suggestions and debugging support
-
-## Getting Started
-
-### Clone the Repository
-```
-git clone https://github.com/your-username/kodo.git
-cd kodo
-```
-
-### Install Dependencies
-```
-npm install
-```
-
-### Run the Project
-```
-npm start
-```
 
 ## Contributing
 Contributions are welcome. Please submit pull requests or open issues to suggest improvements. Ensure that contributions align with the project goals and coding standards.
