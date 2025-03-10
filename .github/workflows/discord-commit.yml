@@ -57,6 +57,3 @@ jobs:
                -X POST \
                -d "$PAYLOAD" \
                "$DISCORD_WEBHOOK_URL"
-`
-
-
