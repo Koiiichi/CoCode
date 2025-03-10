@@ -27,18 +27,22 @@ jobs:
           COMMIT_AUTHOR="${{ github.actor }}"
           BRANCH_NAME="${{ github.ref_name }}"
 
-          # Fetch last commit diff (limited to 10 lines for readability)
-          DIFF=$(git show --stat --color=never --unified=5 --format="" | head -n 10 | jq -Rs .)
+          # Fetch changed files and format them for readability
+          CHANGES=$(git diff --name-status HEAD^ | awk '
+            $1 == "M" { print "Modified: " $2 }
+            $1 == "A" { print "Added: " $2 }
+            $1 == "D" { print "Deleted: " $2 }
+          ' | jq -Rs .)
 
           PAYLOAD=$(jq -n \
             --arg branch "$BRANCH_NAME" \
             --arg message "$COMMIT_MESSAGE" \
             --arg author "$COMMIT_AUTHOR" \
-            --arg diff "$DIFF" \
+            --arg changes "$CHANGES" \
             '{
               embeds: [{
                 title: "New Commit Pushed",
-                description: ("**Branch:** `" + $branch + "`\n\n**Commit Message:**\n```" + $message + "```\n**Author:** " + $author + "\n\n**Changes:**\n```diff\n" + $diff + "\n```"),
+                description: ("**Branch:** `" + $branch + "`\n\n**Commit Message:**\n```" + $message + "```\n**Author:** " + $author + "\n\n**Changes:**\n```" + $changes + "```"),
                 color: 16776960
               }]
             }'
