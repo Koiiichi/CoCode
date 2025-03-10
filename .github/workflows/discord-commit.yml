@@ -12,7 +12,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Fetch Commit Diff
+      - name: Debug Webhook Secret
+        run: |
+          echo "Checking if secret is set..."
+          echo "DISCORD_WEBHOOK_URL length: ${#DISCORD_WEBHOOK_URL}"
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Send commit messages to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           set -e  # Stop execution if any command fails
 
@@ -21,30 +30,7 @@ jobs:
             exit 1
           fi
 
-          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
-          COMMIT_AUTHOR="${{ github.actor }}"
-          COMMIT_URL="${{ github.event.head_commit.url }}"
-          BRANCH_NAME="${{ github.ref_name }}"
-
-          # Fetch last commit diff (limited to 10 lines for readability)
-          DIFF=$(git show --stat --color=never --unified=5 --format="" | head -n 10)
-
-          # Escape newlines for JSON formatting
-          DIFF_ESCAPED=$(echo "$DIFF" | sed ':a;N;$!ba;s/\n/\\n/g')
-
-          PAYLOAD=$(cat <<EOF
-          {
-            "embeds": [{
-              "title": "New Commit Pushed",
-              "description": "**Branch:** \`$BRANCH_NAME\`\\n\\n**Commit Message:**\\n\`\`\`$COMMIT_MESSAGE\`\`\`\\n**Author:** $COMMIT_AUTHOR\\n\\n**Changes:**\\n\`\`\`diff\\n$DIFF_ESCAPED\\n\`\`\`",
-              "color": 16776960
-            }]
-          }
-          EOF
-          )
-
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "$PAYLOAD" \
+          curl -X POST -H "Content-Type: application/json" \
+               -d '{"content": "New commit pushed: '${{ github.event.head_commit.message }}' by '${{ github.actor }}'"}' \
                "$DISCORD_WEBHOOK_URL"
 
