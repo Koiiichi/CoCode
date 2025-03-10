@@ -23,33 +23,39 @@ jobs:
             exit 1
           fi
 
-          COMMIT_MESSAGE=$(echo "${{ github.event.head_commit.message }}" | jq -Rsa .)
+          # Aggregate commit messages from all commits in the push event
+          COMMIT_MESSAGES=$(echo "${{ join(github.event.commits.*.message, "\n") }}" | jq -Rsa .)
           COMMIT_AUTHOR="${{ github.actor }}"
           BRANCH_NAME="${{ github.ref_name }}"
 
-          # Fetch changed files and format them for readability
-          CHANGES=$(git diff --name-status HEAD^ | awk '
+          # Fetch changed files (handles initial commits too)
+          CHANGES_RAW=$(git diff-tree --no-commit-id --name-status -r HEAD | awk '
             $1 == "M" { print "Modified: " $2 }
             $1 == "A" { print "Added: " $2 }
             $1 == "D" { print "Deleted: " $2 }
-          ' | jq -Rs .)
+          ')
+          if [ -z "$CHANGES_RAW" ]; then
+            CHANGES_RAW="No file changes detected"
+          fi
+          CHANGES=$(echo "$CHANGES_RAW" | jq -Rs .)
 
           PAYLOAD=$(jq -n \
             --arg branch "$BRANCH_NAME" \
-            --arg message "$COMMIT_MESSAGE" \
+            --arg message "$COMMIT_MESSAGES" \
             --arg author "$COMMIT_AUTHOR" \
             --arg changes "$CHANGES" \
             '{
               embeds: [{
                 title: "New Commit Pushed",
-                description: ("**Branch:** `" + $branch + "`\n\n**Commit Message:**\n```" + $message + "```\n**Author:** " + $author + "\n\n**Changes:**\n```" + $changes + "```"),
+                description: ("**Branch:** `" + $branch + "`\n\n**Commit Message(s):**\n```" + $message + "```\n**Author:** " + $author + "\n\n**Changes:**\n```" + $changes + "```"),
                 color: 16776960
               }]
             }'
           )
 
-          curl -H "Content-Type: application/json" \
+          RESPONSE=$(curl -H "Content-Type: application/json" \
                -X POST \
                -d "$PAYLOAD" \
-               "$DISCORD_WEBHOOK_URL"
+               "$DISCORD_WEBHOOK_URL")
+          echo "Discord response: $RESPONSE"
 
