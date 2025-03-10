@@ -32,7 +32,7 @@ jobs:
           BRANCH_NAME="${{ github.ref_name }}"
 
           # Show the stat/diff of the most recent commit (limited to 10 lines for brevity)
-          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n 10 | jq -Rs .)
+          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n 5 | jq -Rs .)
 
           PAYLOAD=$(jq -n \
             --arg branch "$BRANCH_NAME" \
