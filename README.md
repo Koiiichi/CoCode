@@ -27,4 +27,4 @@ CoCode is a real-time collaborative coding environment designed to facilitate se
 Contributions are welcome. Please submit pull requests or open issues to suggest improvements. Ensure that contributions align with the project goals and coding standards.
 
 ## License
-This project is licensed under the MIT License..
+This project is licensed under the MIT License.
