@@ -1,11 +1,18 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+
 import {
   getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  signInWithPopup,
   signOut,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  fetchSignInMethodsForEmail,
+  linkWithCredential 
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
+
 import {
   getDatabase,
   ref,
@@ -84,6 +91,59 @@ signupForm.addEventListener("submit", (e) => {
       alert("Signup failed: " + error.message);
     });
 });
+
+const githubProvider = new GithubAuthProvider();
+
+document.getElementById("github-login").addEventListener("click", () => {
+  signInWithPopup(auth, githubProvider)
+    .then((result) => {
+      console.log("GitHub Login Success:", result.user);
+      showEditor();
+    })
+    .catch((error) => {
+      console.error("GitHub Login Failed:", error.message);
+      alert("GitHub login failed: " + error.message);
+    });
+});
+
+const googleProvider = new GoogleAuthProvider();
+
+document.getElementById("google-login").addEventListener("click", () => {
+  signInWithPopup(auth, googleProvider)
+    .then((result) => {
+      console.log("Google Login Success:", result.user);
+      showEditor();
+    })
+    .catch(async (error) => {
+      if (error.code === "auth/account-exists-with-different-credential") {
+        const existingEmail = error.customData.email;
+        console.log("Account exists for:", existingEmail);
+
+        const methods = await fetchSignInMethodsForEmail(auth, existingEmail);
+        if (methods.length > 0) {
+          alert(`Please log in using ${methods[0]} first, then link Google.`);
+          
+          let existingProvider = methods[0] === "github.com" ? new GithubAuthProvider() : null;
+          if (!existingProvider) {
+            alert("Use your email & password to sign in first.");
+            return;
+          }
+
+          const existingUserCredential = await signInWithPopup(auth, existingProvider);
+          const credential = GoogleAuthProvider.credentialFromError(error);
+          await linkWithCredential(existingUserCredential.user, credential);
+
+          console.log("Google linked to existing account!");
+          alert("Google successfully linked to your account!");
+          showEditor();
+        }
+      } else {
+        console.error("Google Login Failed:", error.message);
+        alert("Google login failed: " + error.message);
+      }
+    });
+});
+
 
 // Show the editor after successful authentication
 function showEditor() {
