@@ -1,0 +1,37 @@
+- name: Send Branch Graph & Status to Discord
+  env:
+    DISCORD_BRANCHUPDATE_WEBHOOK_URL: ${{ secrets.DISCORD_BRANCHUPDATE_WEBHOOK_URL }}
+  run: |
+    if [ -z "$DISCORD_BRANCHUPDATE_WEBHOOK_URL" ]; then
+      echo "Skipping Discord notification: No webhook set."
+      exit 0
+    fi
+
+    echo "Preparing payload for Discord..."
+    GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
+    STATUS_JSON=$(echo "${{ steps.generate.outputs.status }}" | jq -Rs .)
+
+    PAYLOAD=$(jq -n \
+      --arg graph "$GRAPH_JSON" \
+      --arg status "$STATUS_JSON" \
+      '{
+        embeds: [{
+          title: "Git Branch Graph & Status",
+          description: (
+            "**Branch Structure:**\n
+" + $graph + "
+\n" +
+            "**Ahead/Behind Status:**\n
+" + $status + "
+"
+          ),
+          color: 3447003
+        }]
+      }'
+    )
+
+    echo "Sending payload to Discord..."
+    curl -H "Content-Type: application/json" \
+         -X POST \
+         -d "$PAYLOAD" \
+         "$DISCORD_BRANCHUPDATE_WEBHOOK_URL"
