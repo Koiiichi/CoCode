@@ -83,10 +83,10 @@ jobs:
           GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
 
           PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" '{
-            embeds: [{
-              title: "Git Branch Graph",
-              description: "```bash\n" + $graph + "\n```",
-              color: 3447003
+          embeds: [{
+          title: "Git Branch Graph",
+          description: ("```bash\n" + $graph + "\n```"),
+          color: 3447003
             }]
           }')
 
