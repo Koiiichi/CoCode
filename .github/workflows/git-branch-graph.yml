@@ -41,17 +41,19 @@ jobs:
           
             # Only compare if this branch isn't main
             if [ "$BRANCH" != "main" ]; then
-              # Compare against origin/main using the entire revision range in one string
-              AHEAD_BEHIND=$(git rev-list --left-right --count "origin/main...origin/$BRANCH")
-              BEHIND=$(echo $AHEAD_BEHIND | cut -d' ' -f1)
-              AHEAD=$(echo $AHEAD_BEHIND | cut -d' ' -f2)
-              
-              if [ "$BEHIND" -gt 0 ] && [ "$AHEAD" -gt 0 ]; then
-                STATUS=" (ahead of main by $AHEAD, behind main by $BEHIND)"
-              elif [ "$BEHIND" -gt 0 ]; then
-                STATUS=" (behind main by $BEHIND)"
-              elif [ "$AHEAD" -gt 0 ]; then
-                STATUS=" (ahead of main by $AHEAD)"
+              # Only calculate ahead/behind if both references exist
+              if git rev-parse --verify "origin/main" >/dev/null 2>&1 && git rev-parse --verify "origin/$BRANCH" >/dev/null 2>&1; then
+                AHEAD_BEHIND=$(git rev-list --left-right --count "origin/main...origin/$BRANCH")
+                BEHIND=$(echo $AHEAD_BEHIND | cut -d' ' -f1)
+                AHEAD=$(echo $AHEAD_BEHIND | cut -d' ' -f2)
+                
+                if [ "$BEHIND" -gt 0 ] && [ "$AHEAD" -gt 0 ]; then
+                  STATUS=" (ahead of main by $AHEAD, behind main by $BEHIND)"
+                elif [ "$BEHIND" -gt 0 ]; then
+                  STATUS=" (behind main by $BEHIND)"
+                elif [ "$AHEAD" -gt 0 ]; then
+                  STATUS=" (ahead of main by $AHEAD)"
+                fi
               fi
             fi
           
