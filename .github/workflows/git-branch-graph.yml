@@ -55,19 +55,8 @@ jobs:
           echo "Preparing payload for Discord..."
           GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
           STATUS_JSON=$(echo "${{ steps.generate.outputs.status }}" | jq -Rs .)
-
-          cat <<EOF > payload.json
-{
-  "embeds": [{
-    "title": "Git Branch Graph & Status",
-    "description": "**Branch Structure:**\n\`\`\`${GRAPH_JSON}\`\`\`\n**Ahead/Behind Status:**\n\`\`\`${STATUS_JSON}\`\`\`",
-    "color": 3447003
-  }]
-}
-EOF
-
+          
+          PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" --arg status "$STATUS_JSON" '{"embeds": [{"title": "Git Branch Graph & Status", "description": ("**Branch Structure:**\n```" + $graph + "```\n**Ahead/Behind Status:**\n```" + $status + "```"), "color": 3447003}]}')
+          
           echo "Sending payload to Discord..."
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               -d "@payload.json" \
-               "$DISCORD_BRANCHUPDATE_WEBHOOK_URL"
+          curl -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$DISCORD_BRANCHUPDATE_WEBHOOK_URL"
