@@ -20,11 +20,11 @@ jobs:
         run: |
           echo "Fetching all branches..."
           git fetch --all
-
+          
           echo "Generating a simplified branch listing..."
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           SIMPLE_GRAPH=""
-
+          
           # List remote branches from origin
           for remote in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/); do
             # Remove the "origin/" prefix
@@ -34,15 +34,15 @@ jobs:
             if [ "$BRANCH" = "HEAD" ]; then
               continue
             fi
-
+          
             # Get short commit hash for the remote branch
             COMMIT=$(git rev-parse --short "origin/$BRANCH")
             STATUS=""
-
+          
             # Only compare if this branch isn't main
             if [ "$BRANCH" != "main" ]; then
-              # Compare against origin/main
-              AHEAD_BEHIND=$(git rev-list --left-right --count origin/main..."origin/$BRANCH")
+              # Compare against origin/main using the entire revision range in one string
+              AHEAD_BEHIND=$(git rev-list --left-right --count "origin/main...origin/$BRANCH")
               BEHIND=$(echo $AHEAD_BEHIND | cut -d' ' -f1)
               AHEAD=$(echo $AHEAD_BEHIND | cut -d' ' -f2)
               
@@ -54,23 +54,23 @@ jobs:
                 STATUS=" (ahead of main by $AHEAD)"
               fi
             fi
-
+          
             if [ "$BRANCH" = "$CURRENT_BRANCH" ]; then
               SIMPLE_GRAPH="$SIMPLE_GRAPH\nHEAD -> $BRANCH -> $COMMIT$STATUS"
             else
               SIMPLE_GRAPH="$SIMPLE_GRAPH\n$BRANCH -> $COMMIT$STATUS"
             fi
           done
-
+          
           # Remove the initial newline
           SIMPLE_GRAPH=$(echo -e "$SIMPLE_GRAPH" | sed '1d')
-
+          
           # Output to the GitHub Actions summary
           echo "### 🛠️ Simple Branch Map" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "$SIMPLE_GRAPH" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
+          
           # Set output for later steps (e.g., Discord)
           echo "graph<<EOF" >> "$GITHUB_OUTPUT"
           echo "$SIMPLE_GRAPH" >> "$GITHUB_OUTPUT"
@@ -84,10 +84,10 @@ jobs:
             echo "Skipping Discord notification: No webhook set."
             exit 0
           fi
-
+          
           echo "Preparing payload for Discord..."
           GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
-
+          
           PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" '{
             embeds: [{
               title: "Git Branch Graph",
@@ -95,7 +95,7 @@ jobs:
               color: 3447003
             }]
           }')
-
+          
           echo "Sending payload to Discord..."
           curl -H "Content-Type: application/json" \
                -X POST \
