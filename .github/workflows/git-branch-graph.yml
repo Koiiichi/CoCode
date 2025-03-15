@@ -3,55 +3,53 @@ name: Git Branch Graph & Status
 on:
   push:
     branches:
-      - "**"  # Triggers on every branch push
+      - "**"
 
 jobs:
   branch-graph:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Check Out Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch full history to generate a complete graph
+          fetch-depth: 0
 
-      - name: Generate Branch Graph and Status
+      - name: Generate Simple Branch Graph
         id: generate
         run: |
-          echo "Generating branch graph..."
-          # A more descriptive format for the log, with relative dates.
-          # We drop color codes because they won't render in Discord.
-          BRANCH_GRAPH=$(git log --graph --abbrev-commit --decorate --date=relative \
-            --pretty=format:'%h (%cr) %s %d' --all)
+          echo "Generating a simplified branch listing..."
 
-          echo "Generating branch status..."
-          # Shows each local branch plus tracking info if available
-          BRANCH_STATUS=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads/)
+          # Grab all local branches
+          BRANCHES=$(git branch --format='%(refname:short)')
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-          echo "### 🛠️ Git Branch Structure" >> $GITHUB_STEP_SUMMARY
-          echo '' >> $GITHUB_STEP_SUMMARY
+          # Build a simple textual graph
+          SIMPLE_GRAPH=""
+          for BRANCH in $BRANCHES; do
+            COMMIT=$(git rev-parse --short "$BRANCH")
+            if [ "$BRANCH" = "$CURRENT_BRANCH" ]; then
+              SIMPLE_GRAPH="$SIMPLE_GRAPH\nHEAD -> $BRANCH -> $COMMIT"
+            else
+              SIMPLE_GRAPH="$SIMPLE_GRAPH\n$BRANCH -> $COMMIT"
+            fi
+          done
+
+          # Trim leading newline & store in an output variable
+          SIMPLE_GRAPH=$(echo -e "$SIMPLE_GRAPH" | sed '1d')
+
+          # Show in the GitHub Actions Summary
+          echo "### 🛠️ Simple Branch Map" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "$BRANCH_GRAPH" >> $GITHUB_STEP_SUMMARY
+          echo "$SIMPLE_GRAPH" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo '' >> $GITHUB_STEP_SUMMARY
 
-          echo "### 📌 Branch Commit Status" >> $GITHUB_STEP_SUMMARY
-          echo '' >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "$BRANCH_STATUS" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo '' >> $GITHUB_STEP_SUMMARY
+          # Also store in step outputs (for Discord, etc.)
+          echo "graph<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$SIMPLE_GRAPH" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
-          # Set outputs for later steps
-          echo "graph<<EOF" >> $GITHUB_OUTPUT
-          echo "$BRANCH_GRAPH" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          echo "status<<EOF" >> $GITHUB_OUTPUT
-          echo "$BRANCH_STATUS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Send Branch Graph & Status to Discord
+      - name: Send Branch Graph to Discord
         env:
           DISCORD_BRANCHUPDATE_WEBHOOK_URL: ${{ secrets.DISCORD_BRANCHUPDATE_WEBHOOK_URL }}
         run: |
@@ -62,19 +60,14 @@ jobs:
 
           echo "Preparing payload for Discord..."
           GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
-          STATUS_JSON=$(echo "${{ steps.generate.outputs.status }}" | jq -Rs .)
 
-          # Build the embed text with triple‐backtick blocks for better readability.
-          # Note: \n is used to separate lines in the final JSON.
-          PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" --arg status "$STATUS_JSON" '{
+          # Wrap in code blocks for readability
+          PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" '{
             embeds: [{
-              title: "Git Branch Graph & Status",
+              title: "Git Branch Graph",
               description: (
-                "**Branch Structure:**\n```bash\n" +
+                "```bash\n" +
                 $graph +
-                "\n```\n\n" +
-                "**Ahead/Behind Status:**\n```bash\n" +
-                $status +
                 "\n```"
               ),
               color: 3447003
