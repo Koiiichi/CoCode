@@ -13,30 +13,36 @@ jobs:
       - name: Check Out Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch full history to compare commits
+          fetch-depth: 0  # Fetch full history
 
       - name: Generate Simple Branch Graph
         id: generate
         run: |
-          echo "Generating a simplified branch listing..."
+          echo "Fetching all branches..."
+          git fetch --all
 
-          # List all local branches
-          BRANCHES=$(git branch --format='%(refname:short)')
+          echo "Generating a simplified branch listing..."
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           SIMPLE_GRAPH=""
 
-          for BRANCH in $BRANCHES; do
-            # Get the short commit hash for the branch
-            COMMIT=$(git rev-parse --short "$BRANCH")
+          # List remote branches from origin
+          for remote in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/); do
+            # Remove the "origin/" prefix
+            BRANCH=${remote#origin/}
             
-            # Initialize status string
+            # Skip "HEAD" reference if present
+            if [ "$BRANCH" = "HEAD" ]; then
+              continue
+            fi
+
+            # Get short commit hash for the remote branch
+            COMMIT=$(git rev-parse --short "origin/$BRANCH")
             STATUS=""
 
-            # Compare branch to main if it's not main
+            # Only compare if this branch isn't main
             if [ "$BRANCH" != "main" ]; then
-              # Compare main vs this branch:
-              # This returns two numbers: [commits unique to main] [commits unique to branch]
-              AHEAD_BEHIND=$(git rev-list --left-right --count main..."$BRANCH")
+              # Compare against origin/main
+              AHEAD_BEHIND=$(git rev-list --left-right --count origin/main..."origin/$BRANCH")
               BEHIND=$(echo $AHEAD_BEHIND | cut -d' ' -f1)
               AHEAD=$(echo $AHEAD_BEHIND | cut -d' ' -f2)
               
@@ -59,7 +65,7 @@ jobs:
           # Remove the initial newline
           SIMPLE_GRAPH=$(echo -e "$SIMPLE_GRAPH" | sed '1d')
 
-          # Output the result to the GitHub Actions summary
+          # Output to the GitHub Actions summary
           echo "### 🛠️ Simple Branch Map" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "$SIMPLE_GRAPH" >> $GITHUB_STEP_SUMMARY
@@ -83,10 +89,10 @@ jobs:
           GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
 
           PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" '{
-          embeds: [{
-          title: "Git Branch Graph",
-          description: ("```bash\n" + $graph + "\n```"),
-          color: 3447003
+            embeds: [{
+              title: "Git Branch Graph",
+              description: ("```bash\n" + $graph + "\n```"),
+              color: 3447003
             }]
           }')
 
