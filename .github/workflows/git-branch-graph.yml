@@ -1,37 +1,73 @@
-- name: Send Branch Graph & Status to Discord
-  env:
-    DISCORD_BRANCHUPDATE_WEBHOOK_URL: ${{ secrets.DISCORD_BRANCHUPDATE_WEBHOOK_URL }}
-  run: |
-    if [ -z "$DISCORD_BRANCHUPDATE_WEBHOOK_URL" ]; then
-      echo "Skipping Discord notification: No webhook set."
-      exit 0
-    fi
+name: Git Branch Graph & Status
 
-    echo "Preparing payload for Discord..."
-    GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
-    STATUS_JSON=$(echo "${{ steps.generate.outputs.status }}" | jq -Rs .)
+on:
+  push:
+    branches:
+      - "**"  # Triggers on every branch push
 
-    PAYLOAD=$(jq -n \
-      --arg graph "$GRAPH_JSON" \
-      --arg status "$STATUS_JSON" \
-      '{
-        embeds: [{
-          title: "Git Branch Graph & Status",
-          description: (
-            "**Branch Structure:**\n
-" + $graph + "
-\n" +
-            "**Ahead/Behind Status:**\n
-" + $status + "
-"
-          ),
-          color: 3447003
-        }]
-      }'
-    )
+jobs:
+  branch-graph:
+    runs-on: ubuntu-latest
 
-    echo "Sending payload to Discord..."
-    curl -H "Content-Type: application/json" \
-         -X POST \
-         -d "$PAYLOAD" \
-         "$DISCORD_BRANCHUPDATE_WEBHOOK_URL"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history to generate a complete graph
+
+      - name: Generate Branch Graph and Status
+        id: generate
+        run: |
+          echo "Generating branch graph..."
+          BRANCH_GRAPH=$(git log --oneline --graph --decorate --all)
+          
+          echo "Generating branch status..."
+          BRANCH_STATUS=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads/)
+          
+          echo "### Git Branch Structure" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$BRANCH_GRAPH" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Branch Commit Status" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$BRANCH_STATUS" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          # Set outputs for later steps
+          echo "graph<<EOF" >> $GITHUB_OUTPUT
+          echo "$BRANCH_GRAPH" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "status<<EOF" >> $GITHUB_OUTPUT
+          echo "$BRANCH_STATUS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Send Branch Graph & Status to Discord
+        env:
+          DISCORD_BRANCHUPDATE_WEBHOOK_URL: ${{ secrets.DISCORD_BRANCHUPDATE_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_BRANCHUPDATE_WEBHOOK_URL" ]; then
+            echo "Skipping Discord notification: No webhook set."
+            exit 0
+          fi
+
+          echo "Preparing payload for Discord..."
+          GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
+          STATUS_JSON=$(echo "${{ steps.generate.outputs.status }}" | jq -Rs .)
+
+          cat <<EOF > payload.json
+{
+  "embeds": [{
+    "title": "Git Branch Graph & Status",
+    "description": "**Branch Structure:**\n\`\`\`${GRAPH_JSON}\`\`\`\n**Ahead/Behind Status:**\n\`\`\`${STATUS_JSON}\`\`\`",
+    "color": 3447003
+  }]
+}
+EOF
+
+          echo "Sending payload to Discord..."
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "@payload.json" \
+               "$DISCORD_BRANCHUPDATE_WEBHOOK_URL"
