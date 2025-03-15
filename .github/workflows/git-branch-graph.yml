@@ -19,26 +19,34 @@ jobs:
         id: generate
         run: |
           echo "Generating branch graph..."
-          BRANCH_GRAPH=$(git log --oneline --graph --decorate --all)
-          
+          # A more descriptive format for the log, with relative dates.
+          # We drop color codes because they won't render in Discord.
+          BRANCH_GRAPH=$(git log --graph --abbrev-commit --decorate --date=relative \
+            --pretty=format:'%h (%cr) %s %d' --all)
+
           echo "Generating branch status..."
+          # Shows each local branch plus tracking info if available
           BRANCH_STATUS=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads/)
-          
+
           echo "### 🛠️ Git Branch Structure" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "$BRANCH_GRAPH" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+
           echo "### 📌 Branch Commit Status" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "$BRANCH_STATUS" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+
           # Set outputs for later steps
           echo "graph<<EOF" >> $GITHUB_OUTPUT
           echo "$BRANCH_GRAPH" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
+
           echo "status<<EOF" >> $GITHUB_OUTPUT
           echo "$BRANCH_STATUS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -55,15 +63,24 @@ jobs:
           echo "Preparing payload for Discord..."
           GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
           STATUS_JSON=$(echo "${{ steps.generate.outputs.status }}" | jq -Rs .)
-          
+
+          # Build the embed text with triple‐backtick blocks for better readability.
+          # Note: \n is used to separate lines in the final JSON.
           PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" --arg status "$STATUS_JSON" '{
             embeds: [{
               title: "Git Branch Graph & Status",
-              description: ("**Branch Structure:**\n```\n" + $graph + "\n```\n**Ahead/Behind Status:**\n```\n" + $status + "\n```"),
+              description: (
+                "**Branch Structure:**\n```bash\n" +
+                $graph +
+                "\n```\n\n" +
+                "**Ahead/Behind Status:**\n```bash\n" +
+                $status +
+                "\n```"
+              ),
               color: 3447003
             }]
           }')
-          
+
           echo "Sending payload to Discord..."
           curl -H "Content-Type: application/json" \
                -X POST \
