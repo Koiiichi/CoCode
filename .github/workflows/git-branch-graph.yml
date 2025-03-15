@@ -24,12 +24,12 @@ jobs:
           echo "Generating branch status..."
           BRANCH_STATUS=$(git for-each-ref --format="%(refname:short) %(upstream:track)" refs/heads/)
           
-          echo "### Git Branch Structure" >> $GITHUB_STEP_SUMMARY
+          echo "### 🛠️ Git Branch Structure" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "$BRANCH_GRAPH" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           
-          echo "### Branch Commit Status" >> $GITHUB_STEP_SUMMARY
+          echo "### 📌 Branch Commit Status" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "$BRANCH_STATUS" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
@@ -56,7 +56,16 @@ jobs:
           GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
           STATUS_JSON=$(echo "${{ steps.generate.outputs.status }}" | jq -Rs .)
           
-          PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" --arg status "$STATUS_JSON" '{"embeds": [{"title": "Git Branch Graph & Status", "description": ("**Branch Structure:**\n```" + $graph + "```\n**Ahead/Behind Status:**\n```" + $status + "```"), "color": 3447003}]}')
+          PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" --arg status "$STATUS_JSON" '{
+            embeds: [{
+              title: "Git Branch Graph & Status",
+              description: ("**Branch Structure:**\n```\n" + $graph + "\n```\n**Ahead/Behind Status:**\n```\n" + $status + "\n```"),
+              color: 3447003
+            }]
+          }')
           
           echo "Sending payload to Discord..."
-          curl -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$DISCORD_BRANCHUPDATE_WEBHOOK_URL"
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "$PAYLOAD" \
+               "$DISCORD_BRANCHUPDATE_WEBHOOK_URL"
