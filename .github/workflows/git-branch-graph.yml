@@ -24,12 +24,18 @@ jobs:
           echo "Generating a simplified branch listing..."
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
           SIMPLE_GRAPH=""
+          DEFAULT_BRANCH="main"  # Change this to "master" if your default branch is master
           
           # List remote branches from origin
           for remote in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/); do
             # Remove the "origin/" prefix
             BRANCH=${remote#origin/}
             
+            # Skip empty branch names
+            if [ -z "$BRANCH" ]; then
+              continue
+            fi
+
             # Skip "HEAD" reference if present
             if [ "$BRANCH" = "HEAD" ]; then
               continue
@@ -39,20 +45,20 @@ jobs:
             COMMIT=$(git rev-parse --short "origin/$BRANCH")
             STATUS=""
           
-            # Only compare if this branch isn't main
-            if [ "$BRANCH" != "main" ]; then
+            # Only compare if this branch isn't the default branch
+            if [ "$BRANCH" != "$DEFAULT_BRANCH" ]; then
               # Only calculate ahead/behind if both references exist
-              if git rev-parse --verify "origin/main" >/dev/null 2>&1 && git rev-parse --verify "origin/$BRANCH" >/dev/null 2>&1; then
-                AHEAD_BEHIND=$(git rev-list --left-right --count "origin/main...origin/$BRANCH")
+              if git rev-parse --verify "origin/$DEFAULT_BRANCH" >/dev/null 2>&1 && git rev-parse --verify "origin/$BRANCH" >/dev/null 2>&1; then
+                AHEAD_BEHIND=$(git rev-list --left-right --count "origin/$DEFAULT_BRANCH...origin/$BRANCH")
                 BEHIND=$(echo $AHEAD_BEHIND | cut -d' ' -f1)
                 AHEAD=$(echo $AHEAD_BEHIND | cut -d' ' -f2)
                 
                 if [ "$BEHIND" -gt 0 ] && [ "$AHEAD" -gt 0 ]; then
-                  STATUS=" (ahead of main by $AHEAD, behind main by $BEHIND)"
+                  STATUS=" (ahead of $DEFAULT_BRANCH by $AHEAD, behind $DEFAULT_BRANCH by $BEHIND)"
                 elif [ "$BEHIND" -gt 0 ]; then
-                  STATUS=" (behind main by $BEHIND)"
+                  STATUS=" (behind $DEFAULT_BRANCH by $BEHIND)"
                 elif [ "$AHEAD" -gt 0 ]; then
-                  STATUS=" (ahead of main by $AHEAD)"
+                  STATUS=" (ahead of $DEFAULT_BRANCH by $AHEAD)"
                 fi
               fi
             fi
