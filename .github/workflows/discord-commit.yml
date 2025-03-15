@@ -3,7 +3,7 @@ name: Post Commit Messages to Discord
 on:
   push:
     branches:
-      - main  # Change if your default branch is different
+      - main  # Change if your default branch is different,
 
 jobs:
   notify:
