@@ -3,7 +3,7 @@ name: Git Branch Graph & Status
 on:
   push:
     branches:
-      - "**"
+      - "**"  # Triggers on every branch push
 
 jobs:
   branch-graph:
@@ -13,38 +13,59 @@ jobs:
       - name: Check Out Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Fetch full history to compare commits
 
       - name: Generate Simple Branch Graph
         id: generate
         run: |
           echo "Generating a simplified branch listing..."
 
-          # Grab all local branches
+          # List all local branches
           BRANCHES=$(git branch --format='%(refname:short)')
           CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
-          # Build a simple textual graph
           SIMPLE_GRAPH=""
+
           for BRANCH in $BRANCHES; do
+            # Get the short commit hash for the branch
             COMMIT=$(git rev-parse --short "$BRANCH")
+            
+            # Initialize status string
+            STATUS=""
+
+            # Compare branch to main if it's not main
+            if [ "$BRANCH" != "main" ]; then
+              # Compare main vs this branch:
+              # This returns two numbers: [commits unique to main] [commits unique to branch]
+              AHEAD_BEHIND=$(git rev-list --left-right --count main..."$BRANCH")
+              BEHIND=$(echo $AHEAD_BEHIND | cut -d' ' -f1)
+              AHEAD=$(echo $AHEAD_BEHIND | cut -d' ' -f2)
+              
+              if [ "$BEHIND" -gt 0 ] && [ "$AHEAD" -gt 0 ]; then
+                STATUS=" (ahead of main by $AHEAD, behind main by $BEHIND)"
+              elif [ "$BEHIND" -gt 0 ]; then
+                STATUS=" (behind main by $BEHIND)"
+              elif [ "$AHEAD" -gt 0 ]; then
+                STATUS=" (ahead of main by $AHEAD)"
+              fi
+            fi
+
             if [ "$BRANCH" = "$CURRENT_BRANCH" ]; then
-              SIMPLE_GRAPH="$SIMPLE_GRAPH\nHEAD -> $BRANCH -> $COMMIT"
+              SIMPLE_GRAPH="$SIMPLE_GRAPH\nHEAD -> $BRANCH -> $COMMIT$STATUS"
             else
-              SIMPLE_GRAPH="$SIMPLE_GRAPH\n$BRANCH -> $COMMIT"
+              SIMPLE_GRAPH="$SIMPLE_GRAPH\n$BRANCH -> $COMMIT$STATUS"
             fi
           done
 
-          # Trim leading newline & store in an output variable
+          # Remove the initial newline
           SIMPLE_GRAPH=$(echo -e "$SIMPLE_GRAPH" | sed '1d')
 
-          # Show in the GitHub Actions Summary
+          # Output the result to the GitHub Actions summary
           echo "### 🛠️ Simple Branch Map" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "$SIMPLE_GRAPH" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-          # Also store in step outputs (for Discord, etc.)
+          # Set output for later steps (e.g., Discord)
           echo "graph<<EOF" >> "$GITHUB_OUTPUT"
           echo "$SIMPLE_GRAPH" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
@@ -61,15 +82,10 @@ jobs:
           echo "Preparing payload for Discord..."
           GRAPH_JSON=$(echo "${{ steps.generate.outputs.graph }}" | jq -Rs .)
 
-          # Wrap in code blocks for readability
           PAYLOAD=$(jq -n --arg graph "$GRAPH_JSON" '{
             embeds: [{
               title: "Git Branch Graph",
-              description: (
-                "```bash\n" +
-                $graph +
-                "\n```"
-              ),
+              description: "```bash\n" + $graph + "\n```",
               color: 3447003
             }]
           }')
