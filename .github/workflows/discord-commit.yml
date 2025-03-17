@@ -3,7 +3,7 @@ name: Post Commit Messages to Discord
 on:
   push:
     branches:
-      - main  # Change if your default branch is different,
+      - main
       - features/**
 
 jobs:
@@ -18,26 +18,38 @@ jobs:
       - name: Send commit messages to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DIFF_LINES: 5  # Number of diff lines to show
         run: |
-          set -e
+          set -eo pipefail
 
           if [ -z "$DISCORD_WEBHOOK_URL" ]; then
             echo "Error: DISCORD_WEBHOOK_URL is not set."
             exit 1
           fi
 
-          # If you push multiple commits at once, only the last commit’s message will appear in head_commit.message.
-          # For a single commit push, this is fine. If you want all commits, read from github.event.commits[*].message.
-          COMMIT_MESSAGE=$(jq -Rs . <<< "${{ github.event.head_commit.message }}")
+          # Build a summary of commit messages for all commits pushed.
+          COMMIT_MESSAGES=""
+          COMMIT_COUNT=$(echo '${{ toJson(github.event.commits) }}' | jq 'length')
+          if [ "$COMMIT_COUNT" -gt 0 ]; then
+            for msg in $(echo '${{ toJson(github.event.commits) }}' | jq -r '.[].message'); do
+              COMMIT_MESSAGES+="$msg\n\n"
+            done
+          else
+            COMMIT_MESSAGES=$(jq -Rs . <<< "${{ github.event.head_commit.message }}")
+          fi
+          # Escape commit messages as a JSON string.
+          COMMIT_MESSAGES=$(jq -Rs . <<< "$COMMIT_MESSAGES")
+
           COMMIT_AUTHOR="${{ github.actor }}"
           BRANCH_NAME="${{ github.ref_name }}"
 
-          # Show the stat/diff of the most recent commit (limited to 10 lines for brevity)
-          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n 5 | jq -Rs .)
+          # Get the diff for the most recent commit, limited by DIFF_LINES.
+          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n $DIFF_LINES | jq -Rs .)
 
+          # Build the payload for Discord with additional details.
           PAYLOAD=$(jq -n \
             --arg branch "$BRANCH_NAME" \
-            --arg message "$COMMIT_MESSAGE" \
+            --arg message "$COMMIT_MESSAGES" \
             --arg author "$COMMIT_AUTHOR" \
             --arg diff "$DIFF" \
             '{
@@ -45,16 +57,18 @@ jobs:
                 title: "New Commit Pushed",
                 description: (
                   "**Branch:** `" + $branch + "`\n\n" +
-                  "**Commit Message:**\n```" + $message + "```\n" +
+                  "**Commit Message(s):**\n```" + $message + "```" +
                   "**Author:** " + $author + "\n\n" +
-                  "**Changes:**\n```diff\n" + $diff + "\n```"
+                  "**Changes:**\n```diff\n" + $diff + "```"
                 ),
-                color: 16776960
+                color: 16776960,
+                timestamp: (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
               }]
             }'
           )
 
-          curl -H "Content-Type: application/json" \
+          # Post the payload to Discord and fail if the request is unsuccessful.
+          curl -f -H "Content-Type: application/json" \
                -X POST \
                -d "$PAYLOAD" \
                "$DISCORD_WEBHOOK_URL"
