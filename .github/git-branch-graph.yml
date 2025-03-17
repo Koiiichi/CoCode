@@ -1,0 +1,124 @@
+name: Git Branch Graph & Status
+
+on:
+  push:
+    branches:
+      - "**"  # Triggers on every branch push
+
+jobs:
+  branch-graph:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Out Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history
+
+      - name: Generate Simple Branch Graph
+        id: generate
+        run: |
+          echo "Fetching all branches..."
+          git fetch --all
+          
+          echo "Generating a simplified branch listing..."
+          # Get current branch more reliably in CI
+          CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
+          SIMPLE_GRAPH=""
+          DEFAULT_BRANCH="main"  # Change this to "master" if your default branch is master
+          
+          echo "Current branch: $CURRENT_BRANCH"
+          
+          # List all branches
+          for branch in $(git branch -r | grep -v "HEAD" | sed 's/origin\///' | tr -d ' '); do
+            # Skip empty branch names
+            if [ -z "$branch" ]; then
+              continue
+            fi
+            
+            # Try to get short commit hash for the branch
+            if git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
+              COMMIT=$(git rev-parse --short "origin/$branch" 2>/dev/null)
+              
+              # Skip if we couldn't get a commit hash
+              if [ -z "$COMMIT" ]; then
+                continue
+              fi
+              
+              STATUS=""
+              
+              # Only compare if this branch isn't the default branch
+              if [ "$branch" != "$DEFAULT_BRANCH" ]; then
+                if git rev-parse --verify "origin/$DEFAULT_BRANCH" >/dev/null 2>&1; then
+                  AHEAD_BEHIND=$(git rev-list --left-right --count "origin/$DEFAULT_BRANCH...origin/$branch" 2>/dev/null || echo "0 0")
+                  # Check if the command succeeded
+                  if [ $? -ne 0 ]; then
+                    STATUS=""
+                  else
+                    BEHIND=$(echo $AHEAD_BEHIND | awk '{print $1}')
+                    AHEAD=$(echo $AHEAD_BEHIND | awk '{print $2}')
+                    
+                    if [ "$BEHIND" -gt 0 ] && [ "$AHEAD" -gt 0 ]; then
+                      STATUS=" (ahead of $DEFAULT_BRANCH by $AHEAD, behind $DEFAULT_BRANCH by $BEHIND)"
+                    elif [ "$BEHIND" -gt 0 ]; then
+                      STATUS=" (behind $DEFAULT_BRANCH by $BEHIND)"
+                    elif [ "$AHEAD" -gt 0 ]; then
+                      STATUS=" (ahead of $DEFAULT_BRANCH by $AHEAD)"
+                    fi
+                  fi
+                fi
+              fi
+              
+              if [ "$branch" = "$CURRENT_BRANCH" ]; then
+                SIMPLE_GRAPH="$SIMPLE_GRAPH\nHEAD --> $branch --> $COMMIT$STATUS"
+              else
+                SIMPLE_GRAPH="$SIMPLE_GRAPH\n$branch --> $COMMIT$STATUS"
+              fi
+            fi
+          done
+          
+          # Remove the initial newline and handle empty graph
+          if [ -n "$SIMPLE_GRAPH" ]; then
+            SIMPLE_GRAPH=$(echo -e "$SIMPLE_GRAPH" | sed '1d')
+          else
+            SIMPLE_GRAPH="No branches found"
+          fi
+          
+          # Output to the GitHub Actions summary
+          echo "### 🛠️ Simple Branch Map" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "$SIMPLE_GRAPH" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          # Set output for later steps
+          echo "graph<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$SIMPLE_GRAPH" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Send Branch Graph to Discord
+        env:
+          DISCORD_BRANCHUPDATE_WEBHOOK_URL: ${{ secrets.DISCORD_BRANCHUPDATE_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_BRANCHUPDATE_WEBHOOK_URL" ]; then
+            echo "Skipping Discord notification: No webhook set."
+            exit 0
+          fi
+          
+          echo "Preparing payload for Discord..."
+          
+          # Handle multi-line output properly
+          GRAPH="${{ steps.generate.outputs.graph }}"
+          
+          PAYLOAD=$(jq -n --arg graph "$GRAPH" '{
+            embeds: [{
+              title: "Git Branch Graph",
+              description: ("```\n" + $graph + "\n```"),
+              color: 3447003
+            }]
+          }')
+          
+          echo "Sending payload to Discord..."
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "$PAYLOAD" \
+               "$DISCORD_BRANCHUPDATE_WEBHOOK_URL"
