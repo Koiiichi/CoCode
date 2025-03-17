@@ -85,7 +85,7 @@ jobs:
           fi
           
           # Output to the GitHub Actions summary
-          echo "### 🛠️ Simple Branch Map" >> $GITHUB_STEP_SUMMARY
+          echo "### Simple Branch Map" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "$SIMPLE_GRAPH" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
