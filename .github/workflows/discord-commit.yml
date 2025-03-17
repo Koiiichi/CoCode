@@ -24,41 +24,38 @@ jobs:
           fi
           
           # Build a summary of commit messages for all commits pushed.
-          COMMIT_MESSAGES=""
           COMMIT_COUNT=$(echo '${{ toJson(github.event.commits) }}' | jq 'length')
           if [ "$COMMIT_COUNT" -gt 0 ]; then
-            while IFS= read -r msg; do
-              COMMIT_MESSAGES+="${msg}\n\n"
-            done < <(echo '${{ toJson(github.event.commits) }}' | jq -r '.[].message')
+            # Extract commit messages without quotes and escape sequences
+            COMMIT_MESSAGES=$(echo '${{ toJson(github.event.commits) }}' | jq -r '.[].message' | sed -z 's/\n/\\n/g')
           else
-            COMMIT_MESSAGES=$(echo "${{ github.event.head_commit.message }}")
+            # Remove quotes and escape sequences from the commit message
+            COMMIT_MESSAGES=$(echo "${{ github.event.head_commit.message }}" | sed -z 's/\n/\\n/g')
           fi
           
           COMMIT_AUTHOR="${{ github.actor }}"
           BRANCH_NAME="${{ github.ref_name }}"
           
-          # Get the diff for the most recent commit, limited by DIFF_LINES.
-          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n $DIFF_LINES)
+          # Get the diff for the most recent commit, limited by DIFF_LINES and clean up escape sequences
+          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n $DIFF_LINES | sed -z 's/\n/\\n/g')
           TIMESTAMP=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
           
-          # Build the JSON payload using jq
-          PAYLOAD=$(jq -n \
-            --arg branch "$BRANCH_NAME" \
-            --arg message "$COMMIT_MESSAGES" \
-            --arg author "$COMMIT_AUTHOR" \
-            --arg diff "$DIFF" \
-            --arg timestamp "$TIMESTAMP" \
-            '{
-              embeds: [{
-                title: "New Commit Pushed",
-                description: "**Branch:** `\($branch)`\n\n**Commit Message(s):**\n```\n\($message)\n```\n**Author:** \($author)\n\n**Changes:**\n```\ndiff\n\($diff)\n```",
-                color: 16776960,
-                timestamp: $timestamp
-              }]
-            }')
+          # Create a raw JSON payload without escaping
+          cat > payload.json << EOF
+          {
+            "embeds": [
+              {
+                "title": "New Commit Pushed",
+                "description": "**Branch:** \`$BRANCH_NAME\`\n\n**Commit Message(s):**\n\`\`\`\n$COMMIT_MESSAGES\n\`\`\`\n**Author:** $COMMIT_AUTHOR\n\n**Changes:**\n\`\`\`\ndiff\n$DIFF\n\`\`\`",
+                "color": 16776960,
+                "timestamp": "$TIMESTAMP"
+              }
+            ]
+          }
+          EOF
           
           # Post the payload to Discord and exit if the request is unsuccessful.
           curl -f -H "Content-Type: application/json" \
                -X POST \
-               -d "$PAYLOAD" \
+               -d @payload.json \
                "$DISCORD_WEBHOOK_URL"
