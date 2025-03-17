@@ -1,11 +1,9 @@
 name: Post Commit Messages to Discord
-
 on:
   push:
     branches:
       - main
       - features/**
-
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -14,60 +12,52 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Ensure we fetch the full repo history
-
       - name: Send commit messages to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DIFF_LINES: 5  # Number of diff lines to show
         run: |
           set -eo pipefail
-
           if [ -z "$DISCORD_WEBHOOK_URL" ]; then
             echo "Error: DISCORD_WEBHOOK_URL is not set."
             exit 1
           fi
-
+          
           # Build a summary of commit messages for all commits pushed.
           COMMIT_MESSAGES=""
           COMMIT_COUNT=$(echo '${{ toJson(github.event.commits) }}' | jq 'length')
           if [ "$COMMIT_COUNT" -gt 0 ]; then
-            for msg in $(echo '${{ toJson(github.event.commits) }}' | jq -r '.[].message'); do
-              COMMIT_MESSAGES+="$msg\n\n"
-            done
+            while IFS= read -r msg; do
+              COMMIT_MESSAGES+="${msg}\n\n"
+            done < <(echo '${{ toJson(github.event.commits) }}' | jq -r '.[].message')
           else
-            COMMIT_MESSAGES=$(jq -Rs . <<< "${{ github.event.head_commit.message }}")
+            COMMIT_MESSAGES=$(echo "${{ github.event.head_commit.message }}")
           fi
-          # Escape commit messages as a JSON string.
-          COMMIT_MESSAGES=$(jq -Rs . <<< "$COMMIT_MESSAGES")
-
+          
           COMMIT_AUTHOR="${{ github.actor }}"
           BRANCH_NAME="${{ github.ref_name }}"
-
+          
           # Get the diff for the most recent commit, limited by DIFF_LINES.
-          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n $DIFF_LINES | jq -Rs .)
-
-          # Build the payload for Discord with additional details.
+          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n $DIFF_LINES)
+          TIMESTAMP=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
+          
+          # Build the JSON payload using jq
           PAYLOAD=$(jq -n \
             --arg branch "$BRANCH_NAME" \
             --arg message "$COMMIT_MESSAGES" \
             --arg author "$COMMIT_AUTHOR" \
             --arg diff "$DIFF" \
+            --arg timestamp "$TIMESTAMP" \
             '{
               embeds: [{
                 title: "New Commit Pushed",
-                description: (
-                  "**Branch:** `" + $branch + "`\n\n" +
-                  "**Commit Message(s):**\n```" + $message + "```" +
-                  "**Author:** " + $author + "\n\n" +
-                  "**Changes:**\n```diff\n" + $diff + "```"
-                ),
+                description: "**Branch:** `\($branch)`\n\n**Commit Message(s):**\n```\n\($message)\n```\n**Author:** \($author)\n\n**Changes:**\n```\ndiff\n\($diff)\n```",
                 color: 16776960,
-                timestamp: (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
+                timestamp: $timestamp
               }]
-            }'
-          )
-
-          # Post the payload to Discord and fail if the request is unsuccessful.
+            }')
+          
+          # Post the payload to Discord and exit if the request is unsuccessful.
           curl -f -H "Content-Type: application/json" \
                -X POST \
                -d "$PAYLOAD" \
