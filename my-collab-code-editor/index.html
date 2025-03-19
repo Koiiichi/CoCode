@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Collaborative Code Editor</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <h1>Collaborative Code Editor</h1>
+
     <!-- User Authentication Section -->
     <div id="auth-section">
       <h2>Login</h2>
@@ -16,6 +18,9 @@
         <button type="submit">Login</button>
       </form>
 
+      <button id="google-login">Login with Google</button>
+      <button id="github-login">Login with GitHub</button>
+
       <h2>Sign Up</h2>
       <form id="signup-form">
         <input type="email" id="signup-email" placeholder="Email" required />
@@ -24,15 +29,14 @@
       </form>
     </div>
 
-    <!-- Code Editor -->
-    <div id="editor" style="display: none;"></div>
+    <!-- Code Editor Section (Only Visible After Login) -->
+    <div id="editor-container" style="display: none;">
+      <button id="logout-button">Logout</button>
+      <div id="editor" style="height: 80vh; width: 100%;"></div>
+    </div>
 
-    <!-- Logout Button -->
-    <button id="logout-button" style="display: none;">Logout</button>
-
-    <!-- Monaco Editor Loader -->
-    <!-- Include require.js to provide the AMD loader -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <!-- RequireJS Loader -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
 
     <!-- Main Application Script -->
     <script type="module" src="/src/script.js"></script>

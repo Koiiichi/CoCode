@@ -1,10 +1,15 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
 import {
   getAuth,
+  signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  fetchSignInMethodsForEmail,
+  linkWithCredential
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
 import {
   getDatabase,
@@ -32,9 +37,13 @@ const database = getDatabase(app);
 // Select DOM elements
 const logoutButton = document.getElementById("logout-button");
 const authSection = document.getElementById("auth-section");
-const editorSection = document.getElementById("editor");
+const editorContainer = document.getElementById("editor-container");
+const editorElement = document.getElementById("editor");
 const loginForm = document.getElementById("login-form");
 const signupForm = document.getElementById("signup-form");
+
+let editor = null; // Monaco Editor instance
+let editorInitialized = false;
 
 // Logout functionality
 logoutButton.addEventListener("click", () => {
@@ -42,12 +51,10 @@ logoutButton.addEventListener("click", () => {
   signOut(auth).then(() => {
     console.log("User signed out.");
     authSection.style.display = "block";
-    editorSection.style.display = "none";
+    editorContainer.style.display = "none";
     logoutButton.style.display = "none";
   });
 });
-
-let editorInitialized = false;
 
 // Login User
 loginForm.addEventListener("submit", (e) => {
@@ -85,11 +92,59 @@ signupForm.addEventListener("submit", (e) => {
     });
 });
 
+// GitHub Authentication
+const githubProvider = new GithubAuthProvider();
+document.getElementById("github-login").addEventListener("click", () => {
+  signInWithPopup(auth, githubProvider)
+    .then((result) => {
+      console.log("GitHub Login Success:", result.user);
+      showEditor();
+    })
+    .catch(handleAuthError);
+});
+
+// Google Authentication
+const googleProvider = new GoogleAuthProvider();
+document.getElementById("google-login").addEventListener("click", () => {
+  signInWithPopup(auth, googleProvider)
+    .then((result) => {
+      console.log("Google Login Success:", result.user);
+      showEditor();
+    })
+    .catch(handleAuthError);
+});
+
+// Handle account-exists-with-different-credential errors
+async function handleAuthError(error) {
+  if (error.code === "auth/account-exists-with-different-credential") {
+    const existingEmail = error.customData.email;
+    console.log("Account exists for:", existingEmail);
+
+    const methods = await fetchSignInMethodsForEmail(auth, existingEmail);
+    if (methods.length > 0) {
+      alert(`Please log in using ${methods[0]} first, then link accounts.`);
+      
+      let existingProvider = methods[0] === "github.com" ? new GithubAuthProvider() : new GoogleAuthProvider();
+      const existingUserCredential = await signInWithPopup(auth, existingProvider);
+      const credential = GithubAuthProvider.credentialFromError(error);
+
+      await linkWithCredential(existingUserCredential.user, credential);
+      console.log("Accounts linked successfully!");
+      alert("Accounts successfully linked!");
+      showEditor();
+    }
+  } else {
+    console.error("Authentication failed:", error.message);
+    alert("Authentication failed: " + error.message);
+  }
+}
+
 // Show the editor after successful authentication
 function showEditor() {
   console.log("showEditor called");
   authSection.style.display = "none";
-  editorSection.style.display = "block";
+  editorContainer.style.display = "block";
+  logoutButton.style.display = "inline-block";
 
   if (!editorInitialized) {
     initializeEditor();
@@ -101,28 +156,11 @@ function showEditor() {
 function initializeEditor() {
   console.log("Initializing Monaco Editor");
 
-  self.MonacoEnvironment = {
-    getWorkerUrl: function (moduleId, label) {
-      let workerPath = "monaco-editor/min/vs/base/worker/workerMain.js";
-      if (label === "json") {
-        workerPath = "monaco-editor/min/vs/language/json/jsonWorker.js";
-      } else if (label === "css") {
-        workerPath = "monaco-editor/min/vs/language/css/cssWorker.js";
-      } else if (label === "html") {
-        workerPath = "monaco-editor/min/vs/language/html/htmlWorker.js";
-      } else if (label === "typescript" || label === "javascript") {
-        workerPath = "monaco-editor/min/vs/language/typescript/tsWorker.js";
-      }
-      const script = `importScripts("${location.origin}/${workerPath}")`;
-      return `data:text/javascript;charset=utf-8,${encodeURIComponent(script)}`;
-    },
-  };
-
-  require.config({ paths: { vs: "/monaco-editor/min/vs" } });
+  require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs" } });
 
   require(["vs/editor/editor.main"], function () {
     console.log("Monaco Editor initialized!");
-    const editor = monaco.editor.create(document.getElementById("editor"), {
+    editor = monaco.editor.create(editorElement, {
       value: "// Start coding here...",
       language: "javascript",
       theme: "vs-dark",
@@ -157,11 +195,10 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     console.log("User authenticated:", user.email);
     showEditor();
-    logoutButton.style.display = "inline-block";
   } else {
     console.log("No user authenticated.");
     authSection.style.display = "block";
-    editorSection.style.display = "none";
+    editorContainer.style.display = "none";
     logoutButton.style.display = "none";
   }
 });
