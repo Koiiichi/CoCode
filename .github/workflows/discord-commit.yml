@@ -15,7 +15,7 @@ jobs:
       - name: Send commit messages to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          DIFF_LINES: 5  # Number of diff lines to show
+          DIFF_LINES: 10  # Number of diff lines to show
         run: |
           set -eo pipefail
           if [ -z "$DISCORD_WEBHOOK_URL" ]; then
@@ -26,22 +26,22 @@ jobs:
           # Build a summary of commit messages for all commits pushed.
           COMMIT_COUNT=$(echo '${{ toJson(github.event.commits) }}' | jq 'length')
           if [ "$COMMIT_COUNT" -gt 0 ]; then
-            # Extract commit messages using jq's string handling
-            COMMIT_MESSAGES=$(echo '${{ toJson(github.event.commits) }}' | jq -r '.[].message' | tr '\n' '\\n')
+            # Extract commit messages for Discord formatting
+            COMMIT_MESSAGES=$(echo '${{ toJson(github.event.commits) }}' | jq -r '.[].message')
           else
             # Process the head commit message
-            COMMIT_MESSAGES=$(echo "${{ github.event.head_commit.message }}" | tr '\n' '\\n')
+            COMMIT_MESSAGES="${{ github.event.head_commit.message }}"
           fi
           
           COMMIT_AUTHOR="${{ github.actor }}"
           BRANCH_NAME="${{ github.ref_name }}"
           
-          # Get the diff and process with tr instead of sed
-          DIFF=$(git show --stat --color=never --unified=5 --format="" HEAD | head -n $DIFF_LINES | tr '\n' '\\n')
+          # Get the diff
+          DIFF=$(git show --stat --color=never --unified=3 --format="" HEAD | head -n $DIFF_LINES)
           TIMESTAMP=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
           
-          # Create the payload with proper escaping using jq
-          jq -n \
+          # Create the payload with proper JSON escaping but preserve real newlines
+          PAYLOAD=$(jq -n \
             --arg branch "$BRANCH_NAME" \
             --arg message "$COMMIT_MESSAGES" \
             --arg author "$COMMIT_AUTHOR" \
@@ -50,14 +50,14 @@ jobs:
             '{
               embeds: [{
                 title: "New Commit Pushed",
-                description: "**Branch:** `\($branch)`\n\n**Commit Message(s):**\n```\n\($message)\n```\n**Author:** \($author)\n\n**Changes:**\n```\ndiff\n\($diff)\n```",
+                description: "**Branch:** `\($branch)`\n\n**Commit Message(s):**\n```\n\($message)\n```\n**Author:** \($author)\n\n**Changes:**\n```\n\($diff)\n```",
                 color: 16776960,
                 timestamp: $timestamp
               }]
-            }' > payload.json
+            }')
           
           # Post the payload to Discord
           curl -f -H "Content-Type: application/json" \
                -X POST \
-               -d @payload.json \
+               -d "$PAYLOAD" \
                "$DISCORD_WEBHOOK_URL"
