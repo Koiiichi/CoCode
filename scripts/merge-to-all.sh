@@ -6,7 +6,7 @@ if [ -z "$1" ]; then
 fi
 
 SOURCE_BRANCH="$1"
-ALL_TARGETS=("main" "feature/auth-backend" "feature/code-management")
+ALL_TARGETS=("feature/auth-frontend" "feature/auth-backend" "feature/code-management" "main")
 
 # Filter target branches to exclude the source branch
 TARGET_BRANCHES=()
