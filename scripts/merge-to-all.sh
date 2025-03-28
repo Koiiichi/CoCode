@@ -10,17 +10,38 @@ if [ "$CURRENT_USER" != "$AUTHORIZED_USER" ]; then
 fi
 
 # === Parse arguments ===
-if [ -z "$1" ]; then
-  echo "Usage: $0 <source-branch> [--dry-run]"
-  exit 1
-fi
-
-SOURCE_BRANCH="$1"
+SOURCE_BRANCH=""
 DRY_RUN=false
+EXCLUDE_BRANCHES=()
 
-if [ "$2" == "--dry-run" ]; then
-  DRY_RUN=true
-  echo "[Dry Run] No merges will be performed."
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    --exclude)
+      shift
+      while [[ $# -gt 0 && "$1" != --* ]]; do
+        EXCLUDE_BRANCHES+=("$1")
+        shift
+      done
+      ;;
+    *)
+      if [ -z "$SOURCE_BRANCH" ]; then
+        SOURCE_BRANCH="$1"
+        shift
+      else
+        echo "Unexpected argument: $1"
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+if [ -z "$SOURCE_BRANCH" ]; then
+  echo "Usage: $0 <source-branch> [--dry-run] [--exclude <branch1> <branch2> ...]"
+  exit 1
 fi
 
 # === Verify source branch exists ===
@@ -30,8 +51,12 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# === Get all local branches except source ===
+# === Get all local branches and exclude source and any user-excluded branches ===
 TARGET_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/heads/ | grep -v "^$SOURCE_BRANCH\$")
+
+for EX in "${EXCLUDE_BRANCHES[@]}"; do
+  TARGET_BRANCHES=$(echo "$TARGET_BRANCHES" | grep -v "^$EX\$")
+done
 
 # === Checkout and update source branch ===
 git checkout $SOURCE_BRANCH || exit 1
@@ -39,7 +64,15 @@ git pull origin $SOURCE_BRANCH || exit 1
 
 # === Merge source into each target ===
 for TARGET in $TARGET_BRANCHES; do
+  # Check if TARGET is ahead of SOURCE
+  AHEAD_COUNT=$(git rev-list --left-right --count "$SOURCE_BRANCH...$TARGET" | awk '{print $2}')
+  if [ "$AHEAD_COUNT" -gt 0 ]; then
+    echo "Skipping '$TARGET' — it is ahead of '$SOURCE_BRANCH'"
+    continue
+  fi
+
   echo "Merging '$SOURCE_BRANCH' into '$TARGET'..."
+
   if $DRY_RUN; then
     echo "[Dry Run] Would run: git checkout $TARGET"
     echo "[Dry Run] Would run: git pull origin $TARGET"
