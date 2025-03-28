@@ -1,108 +1,327 @@
-/* Global Body Styles */
-body {
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
+/* ===== Reset & Global ===== */
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* ===== Scoped Bodies for Auth Pages ===== */
+.login-body,
+.signup-body {
+  background-color: #ffffff;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* ===== Top Header (Logo + Brand Name) ===== */
+.app-header {
+  position: absolute;
+  top: 20px;
+  left: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 9999;
+}
+
+.app-logo {
+  height: 32px;
+  width: 32px;
+}
+
+.app-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #111;
+}
+
+/* ===== Auth Container ===== */
+.auth-container {
+  margin-top: 100px;
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  padding: 36px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  background-color: #fff;
+  font-size: 1.15rem;
+}
+
+.auth-container h2 {
+  font-size: 1.35rem;
+  margin-bottom: 24px;
+  color: #222;
+}
+
+/* ===== Auth Forms ===== */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.auth-form input {
+  padding: 14px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+/* ===== Buttons ===== */
+.primary-btn {
+  background-color: #fa6c4d;
+  color: white;
+  border: none;
+  padding: 14px;
+  font-size: 1.05rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover {
+  background-color: #e1583a;
+}
+
+.link {
+  display: block;
+  margin: 12px 0;
+  font-size: 0.95rem;
+  color: #666;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* ===== Social Logins ===== */
+.social-logins {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.social-btn img {
+  height: 20px;
+  width: 20px;
+}
+
+.google {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  color: #000;
+}
+
+.google:hover {
+  background-color: #f2f2f2;
+}
+
+.github {
+  background-color: #24292e;
+  color: white;
+}
+
+.github:hover {
+  background-color: #1b1f23;
+}
+
+/* ===== Footer ===== */
+.footer {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  color: #888;
+}
+
+.footer .link {
+  color: #007bff;
+}
+
+/* ===== Editor App Layout ===== */
+.editor-app {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background-color: #1e1e1e;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.editor-main {
+  flex-grow: 1;
+  display: flex;
+  height: calc(100vh - 42px);
+}
+
+/* ===== Editor Header ===== */
+.title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1e1e1e;
+  color: white;
+  padding: 8px 14px;
+  border-bottom: 1px solid #333;
+  height: 42px;
+}
+
+.title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.editor-logo {
+  height: 24px;
+  width: 24px;
+  object-fit: contain;
+}
+
+.editor-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: white;
+  letter-spacing: 0.4px;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: 48px;
+  background-color: #1a1a1a;
+  border-right: 1px solid #2a2a2a;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-top: 10px;
+  gap: 10px;
 }
 
-/* Page Title */
-h1 {
-  text-align: center;
-  margin: 20px 0;
-}
-
-/* Authentication Section */
-#auth-section {
-  width: 300px;
-  margin-top: 50px;
-  padding: 20px;
-  background: white;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  text-align: center;
-}
-
-#auth-section form {
-  display: flex;
-  flex-direction: column;
-}
-
-#auth-section input {
-  padding: 10px;
-  margin: 8px 0;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-#auth-section button {
-  background-color: #007bff;
-  color: white;
-  padding: 10px;
-  margin-top: 10px;
+.sidebar button {
+  background: none;
   border: none;
-  border-radius: 4px;
+  font-size: 1.1rem;
+  color: #888;
   cursor: pointer;
 }
 
-#auth-section button:hover {
-  background-color: #0056b3;
+.sidebar button:hover {
+  color: #fff;
 }
 
-/* Social Login Buttons */
-#google-login, #github-login {
-  background-color: #444;
-  color: white;
-  padding: 10px;
-  margin: 5px 0;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100%;
-}
-
-#google-login:hover {
-  background-color: #db4437;
-}
-
-#github-login:hover {
-  background-color: #24292e;
-}
-
-/* Editor Container */
-#editor-container {
-  display: none;
-  width: 100%;
-  height: 100vh;
+/* ===== Tab Bar ===== */
+.tab-bar {
+  height: 36px;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  align-items: center;
+  background-color: #2b2b2b;
+  border-bottom: 1px solid #1a1a1a;
+  padding-left: 10px;
+  font-size: 0.9rem;
 }
 
-/* Monaco Editor */
+.tab {
+  padding: 6px 12px;
+  margin-right: 4px;
+  color: #ccc;
+  background-color: transparent;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+}
+
+.tab.active {
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+/* ===== Monaco Editor ===== */
 #editor {
   flex-grow: 1;
   width: 100%;
-  height: calc(100vh - 50px); /* Full height minus the logout button space */
-  border: none;
+  height: 100%;
   background-color: #1e1e1e;
 }
 
-/* Logout Button */
-#logout-button {
-  background-color: red;
+/* ===== Logout Button (Dropdown-style) ===== */
+.logout-btn {
+  background-color: #ff4d4d;
   color: white;
-  padding: 10px;
+  padding: 6px 14px;
+  font-weight: bold;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  align-self: flex-end;
-  margin: 10px;
+  transition: background 0.2s ease;
 }
 
-#logout-button:hover {
-  background-color: darkred;
+.logout-btn:hover {
+  background-color: #e84343;
+}
+
+/* ===== Profile Menu & Dropdown ===== */
+.profile-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.profile-button {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #ccc;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.profile-button:hover {
+  color: #fff;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  display: none;
+  flex-direction: column;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px;
+  min-width: 120px;
+  z-index: 999;
+}
+
+.profile-dropdown.show {
+  display: flex;
+}
+
+.editor-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }

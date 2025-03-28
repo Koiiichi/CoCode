@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Sign Up | CoCode</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="signup-body">
+    <div class="app-header">
+      <img src="/assets/logo.png" alt="Logo" class="app-logo" />
+      <span class="app-name">CoCode</span>
+    </div>
+
+    <div class="auth-container">
+      <h2>Create your account</h2>
+
+      <form id="signup-form" class="auth-form">
+        <input type="email" id="signup-email" placeholder="Email" required />
+        <input type="password" id="signup-password" placeholder="Password" required />
+        <button type="submit" class="primary-btn">Sign Up</button>
+      </form>
+
+      <div class="social-logins">
+        <button id="google-signup" class="social-btn google">
+          <img src="/assets/google-icon.png" alt="Google" /> Sign up with Google
+        </button>
+        <button id="github-signup" class="social-btn github">
+          <img src="/assets/github-icon.png" alt="GitHub" /> Sign up with GitHub
+        </button>
+      </div>
+
+      <a class="link" href="login.html">Already have an account? Log in</a>
+    </div>
+
+    <script type="module" src="/src/signup.js"></script>
+  </body>
+</html>
