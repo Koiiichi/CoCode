@@ -1,12 +1,34 @@
 #!/bin/bash
 
-# === Config: Authorized user ===
-AUTHORIZED_USER="Muneeb Hassan"
-CURRENT_USER=$(git config user.name)
+# Git Multi-Branch Merge Tool
+# Created by Koichi/Muneeb
 
-if [ "$CURRENT_USER" != "$AUTHORIZED_USER" ]; then
-  echo "Unauthorized: Only $AUTHORIZED_USER is allowed to run this script."
-  exit 1
+# === Authorization Check ===
+source "$(dirname "$0")/.internal/authorize.sh"
+
+# === Help Function ===
+show_help() {
+    echo "Git Multi-Branch Merge Tool"
+    echo "Created by Koichi/Muneeb"
+    echo
+    echo "Usage:"
+    echo "  $0 <source-branch> [OPTIONS]"
+    echo
+    echo "Options:"
+    echo "  --dry-run              Simulate merge operations without applying changes"
+    echo "  --exclude BRANCH(ES)   One or more branches to exclude from the merge"
+    echo "  --help                 Show this help message"
+    echo
+    echo "Examples:"
+    echo "  ./merge-to-all.sh feature/auth-frontend"
+    echo "  ./merge-to-all.sh main --exclude feature/code-management"
+    echo "  ./merge-to-all.sh dev --dry-run --exclude main feature/global-cursor"
+    exit 0
+}
+
+# === Parse arguments ===
+if [[ "$1" == "--help" ]]; then
+  show_help
 fi
 
 # === Parse arguments ===
@@ -16,6 +38,9 @@ EXCLUDE_BRANCHES=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --help)
+      show_help
+      ;;
     --dry-run)
       DRY_RUN=true
       shift
@@ -32,8 +57,10 @@ while [[ $# -gt 0 ]]; do
         SOURCE_BRANCH="$1"
         shift
       else
-        echo "Unexpected argument: $1"
+        echo "Error: Unexpected argument '$1'"
+        echo "Run '$0 --help' for usage information."
         exit 1
+
       fi
       ;;
   esac
@@ -41,8 +68,12 @@ done
 
 if [ -z "$SOURCE_BRANCH" ]; then
   echo "Usage: $0 <source-branch> [--dry-run] [--exclude <branch1> <branch2> ...]"
+  echo "Use --help for more information."
   exit 1
 fi
+
+# === Authorization Check ===
+validate_authorization
 
 # === Verify source branch exists ===
 git show-ref --verify --quiet refs/heads/$SOURCE_BRANCH
