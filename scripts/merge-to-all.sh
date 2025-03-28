@@ -31,7 +31,6 @@ if [[ "$1" == "--help" ]]; then
   show_help
 fi
 
-# === Parse arguments ===
 SOURCE_BRANCH=""
 DRY_RUN=false
 EXCLUDE_BRANCHES=()
@@ -60,7 +59,6 @@ while [[ $# -gt 0 ]]; do
         echo "Error: Unexpected argument '$1'"
         echo "Run '$0 --help' for usage information."
         exit 1
-
       fi
       ;;
   esac
@@ -103,19 +101,36 @@ git pull origin $SOURCE_BRANCH || exit 1
 
 # === Merge source into each target ===
 for TARGET in $TARGET_BRANCHES; do
-  # Check if TARGET is ahead of SOURCE
-  AHEAD_COUNT=$(git rev-list --left-right --count "$SOURCE_BRANCH...$TARGET" | awk '{print $2}')
-  if [ "$AHEAD_COUNT" -gt 0 ]; then
+  # Compute ahead/behind
+  AHEAD_BEHIND=$(git rev-list --left-right --count "$SOURCE_BRANCH...$TARGET")
+  AHEAD=$(echo $AHEAD_BEHIND | awk '{print $2}')
+  BEHIND=$(echo $AHEAD_BEHIND | awk '{print $1}')
+
+  # Skip diverged branches (ahead + behind > 0)
+  if [ "$AHEAD" -gt 0 ] && [ "$BEHIND" -gt 0 ]; then
+    echo "Skipping '$TARGET' — branches have diverged from '$SOURCE_BRANCH'"
+    if $DRY_RUN; then
+      echo "[Dry Run] $TARGET: ahead=$AHEAD, behind=$BEHIND"
+      echo "[Dry Run] Skipped '$TARGET' due to divergence from '$SOURCE_BRANCH'"
+      echo
+    fi
+    continue
+  fi
+
+  # Skip purely ahead branches
+  if [ "$AHEAD" -gt 0 ]; then
     echo "Skipping '$TARGET' — it is ahead of '$SOURCE_BRANCH'"
     if $DRY_RUN; then
+      echo "[Dry Run] $TARGET: ahead=$AHEAD, behind=$BEHIND"
       echo "[Dry Run] Skipped '$TARGET' to avoid overwriting newer commits"
+      echo
     fi
     continue
   fi
 
   echo "Merging '$SOURCE_BRANCH' into '$TARGET'..."
-
   if $DRY_RUN; then
+    echo "[Dry Run] $TARGET: ahead=$AHEAD, behind=$BEHIND"
     echo "[Dry Run] Would run: git checkout $TARGET"
     echo "[Dry Run] Would run: git pull origin $TARGET"
     echo "[Dry Run] Would run: git merge $SOURCE_BRANCH -m \"Merge $SOURCE_BRANCH into $TARGET\""
