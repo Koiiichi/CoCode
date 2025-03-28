@@ -1,5 +1,13 @@
 #!/bin/bash
 
+AUTHORIZED_USER="Muneeb Hassan"
+CURRENT_USER=$(git config user.name)
+
+if [ "$CURRENT_USER" != "$AUTHORIZED_USER" ]; then
+  echo "Unauthorized: Only $AUTHORIZED_USER is allowed to run this script."
+  exit 1
+fi
+
 if [ -z "$1" ]; then
   echo "Usage: $0 <source-branch>"
   exit 1
