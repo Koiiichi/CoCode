@@ -341,7 +341,7 @@ body {
 
 /* ===== HOME NAVIGATION BUTTON ===== */
 .home-btn {
-  background-color: #444;
+  background-color: #fa6c4d;
   color: #fff;
   border: none;
   padding: 6px 12px;
@@ -351,7 +351,7 @@ body {
   font-size: 0.8rem;
 }
 .home-btn:hover {
-  background-color: #666;
+  background-color: #ed4e2b;
 }
 
 /* ====== Slide-out Panels (Files, Search, Settings) ====== */
