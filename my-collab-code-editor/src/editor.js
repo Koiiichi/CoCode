@@ -223,7 +223,8 @@ function loadFiles() {
   });  
 
   onChildChanged(fileListRef, (snap) => {
-    const fileName = snap.key;
+    const encodedFileName = snap.key;
+    const fileName = decodeURIComponent(encodedFileName);
     const fileObj = snap.val() || {};
     const newContent = fileObj.content ?? "";
     const model = modelsByFile[fileName];
@@ -247,10 +248,11 @@ function loadFiles() {
   });  
   // Listen for removed files
   onChildRemoved(fileListRef, (snap) => {
-    const fileName = snap.key;
+    const encodedFileName = snap.key;
+    const fileName = decodeURIComponent(encodedFileName);
     removeTab(fileName);
-  });
-}
+  });  
+} // Add this closing brace for loadFiles()
 
 // Create a Monaco model for a file
 function createFileModel(fileName, content, fileType) {
@@ -263,7 +265,9 @@ function createFileModel(fileName, content, fileType) {
   model.onDidChangeContent(() => {
     isLocalChange = true;
     const newVal = model.getValue();
-    const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${fileName}`);
+    // Encode the fileName for Firebase key usage.
+    const encodedFileName = encodeURIComponent(fileName);
+    const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
     
     onValue(fileRef, (snap) => {
       const existing = snap.val() || {};
