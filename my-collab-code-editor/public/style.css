@@ -266,6 +266,13 @@ body {
   cursor: pointer;
   margin-left: auto; /* push to right edge */
 }
+
+.tab-add img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
 .tab-add:hover {
   background-color: #333;
 }
@@ -339,7 +346,8 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  position: relative;
+  position: relative; /* required for .slide-panel absolute positioning */
+  overflow: hidden;
 }
 
 /* ===== HOME NAVIGATION BUTTON ===== */
@@ -360,18 +368,36 @@ body {
 /* ====== Slide-out Panels (Files, Search, Settings) ====== */
 .slide-panel {
   position: absolute;
-  top: 36px;
-  left: 48px; /* right of sidebar */
+  top: 42px; /* below the title bar */
+  left: 48px;
   width: 0;
-  height: calc(100% - 36px);
+  height: calc(100vh - 42px);
   overflow: hidden;
   background-color: #2b2b2b;
   transition: width 0.3s ease;
   padding: 8px;
   box-sizing: border-box;
   border-right: 1px solid #444;
-  z-index: 50;
+  z-index: 99; /* ensure above Monaco but below top bar */
 }
+
+.slide-panel[style*="width: 0"] {
+  visibility: hidden;
+}
+
+.slide-panel[style*="width: 250px"] {
+  visibility: visible;
+}
+
+.slide-panel.hidden {
+  width: 0 !important;
+  visibility: hidden !important;
+}
+.slide-panel.visible {
+  width: 250px !important;
+  visibility: visible !important;
+}
+
 .slide-panel h3 {
   margin-bottom: 10px;
   color: #fff;

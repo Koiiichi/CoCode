@@ -40,15 +40,15 @@
       <!-- Editor Area -->
       <div class="editor-wrapper">
         <!-- Slide-out Panels for Files, Search, Settings (placeholders) -->
-        <div class="slide-panel" id="files-panel">
+        <div class="slide-panel hidden" id="files-panel">
           <h3>Files Panel</h3>
           <!-- Potentially list files or show project structure here -->
         </div>
-        <div class="slide-panel" id="search-panel">
+        <div class="slide-panel hidden" id="search-panel">
           <h3>Search Panel</h3>
           <!-- Potentially implement search in the future -->
         </div>
-        <div class="slide-panel" id="settings-panel">
+        <div class="slide-panel hidden" id="settings-panel">
           <h3>Settings Panel</h3>
           <!-- Potential theme, font-size, auto-save toggles in the future -->
         </div>
@@ -56,9 +56,9 @@
         <!-- Tab Bar -->
         <div class="tab-bar" id="tab-bar">
           <!-- Dynamic tabs get appended here. -->
-          <div class="tab-add" id="add-file-tab">
+          <div class="tab-add" id="add-file-tab" title="Add File">
             <img src="/assets/add-icon.png" alt="Add File" />
-          </div>          
+          </div>                  
         </div>
 
         <!-- Monaco Editor -->

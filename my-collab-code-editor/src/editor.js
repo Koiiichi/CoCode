@@ -146,15 +146,18 @@ settingsBtn?.addEventListener("click", () => {
 });
 
 function togglePanel(panel) {
-  // close others
+  // Close all
   [filesPanel, searchPanel, settingsPanel].forEach((p) => {
-    if (p !== panel) p.style.width = "0";
+    p.classList.remove("visible");
+    p.classList.add("hidden");
   });
-  // toggle this one
-  if (panel.style.width === "250px") {
-    panel.style.width = "0";
+
+  if (panel.classList.contains("visible")) {
+    panel.classList.remove("visible");
+    panel.classList.add("hidden");
   } else {
-    panel.style.width = "250px";
+    panel.classList.remove("hidden");
+    panel.classList.add("visible");
   }
 }
 
