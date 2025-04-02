@@ -51,6 +51,7 @@ export async function deleteProject(uid, projectId) {
 /**
  * Create a single file in a project (e.g. "main.c", "style.css")
  */
+// fileIO.js - Update createFile function
 export function createFile(uid, projectId, fileName, initialContent = "") {
     // Encode the file name before using it as a key.
     const encodedFileName = encodeURIComponent(fileName);

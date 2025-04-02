@@ -203,6 +203,7 @@ function initializeEditor() {
 // ------------------
 // File Sync
 // ------------------
+
 function loadFiles() {
   const fileListRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files`);
   let hasAtLeastOneFile = false;
@@ -252,9 +253,10 @@ function loadFiles() {
     const fileName = decodeURIComponent(encodedFileName);
     removeTab(fileName);
   });  
-} // Add this closing brace for loadFiles()
+}
 
 // Create a Monaco model for a file
+
 function createFileModel(fileName, content, fileType) {
   if (modelsByFile[fileName]) return;
 
@@ -340,6 +342,7 @@ function removeTab(fileName) {
 }
 
 // “Add File” in tab bar
+
 addFileTab.addEventListener("click", () => {
   const fileName = prompt("Enter new file name (e.g. main.c):");
   if (!fileName) return;
