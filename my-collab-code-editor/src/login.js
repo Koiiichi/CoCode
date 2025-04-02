@@ -34,7 +34,7 @@ import {
   
     signInWithEmailAndPassword(auth, email, password)
       .then(() => {
-        window.location.href = "editor.html";
+        window.location.href = "home.html";
       })
       .catch((error) => {
         alert("Login failed: " + error.message);
@@ -49,7 +49,7 @@ import {
   document.getElementById("google-login").addEventListener("click", () => {
     signInWithPopup(auth, googleProvider)
       .then(() => {
-        window.location.href = "editor.html";
+        window.location.href = "home.html";
       })
       .catch(handleAuthError);
   });
@@ -58,7 +58,7 @@ import {
   document.getElementById("github-login").addEventListener("click", () => {
     signInWithPopup(auth, githubProvider)
       .then(() => {
-        window.location.href = "editor.html";
+        window.location.href = "home.html";
       })
       .catch(handleAuthError);
   });
@@ -86,7 +86,7 @@ import {
   
         await linkWithCredential(existingUser.user, credential);
         alert("Accounts linked!");
-        window.location.href = "editor.html";
+        window.location.href = "home.html";
       }
     } else {
       alert("Auth error: " + error.message);
@@ -96,6 +96,6 @@ import {
   // Redirect logged-in users
   onAuthStateChanged(auth, (user) => {
     if (user) {
-      window.location.href = "editor.html";
+      window.location.href = "home.html";
     }
   });  

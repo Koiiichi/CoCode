@@ -1,52 +1,77 @@
+// fileIO.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-import { getDatabase, ref, onVale, set } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  onValue,
+  set,
+  remove,
+  update
+} from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
 
+// Initialize
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-// assuming user has read/write priviliges with the given project
-function makeProject(userName, shareList, projectId, lang, thm) {
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const reference = ref(db, "projects/" + projectId);
-    set(reference, {
-        creator: userName,
-        language: lang,
-        theme: thm,
-        shareList: JSON.parse('[]') // empty list
-    });
+/**
+ * Create a new project under the user's account.
+ * @param {string} uid User ID of the current user
+ * @param {string} projectId e.g. "proj_1234567"
+ * @param {string} name Optional project name
+ * @param {string} language e.g. "javascript"
+ * @param {string} theme e.g. "vs-dark"
+ */
+export function createProject(uid, projectId, name, language = "javascript", theme = "vs-dark") {
+  const projectPath = `users/${uid}/projects/${projectId}`;
+  set(ref(db, projectPath), {
+    projectName: name || projectId,
+    language,
+    theme,
+    shareList: [],
+    files: {} // empty object to store file contents
+  }).catch(console.error);
 }
 
-function addUser(userId, projectId) {
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const reference = ref(db, "projects/" + projectId);
-    reference.shareList.push(userId);
+/**
+ * Delete the user's project entirely
+ */
+export async function deleteProject(uid, projectId) {
+  const projectPath = `users/${uid}/projects/${projectId}`;
+  await remove(ref(db, projectPath)).catch(console.error);
 }
 
-function removeUser(userId, projectId) {
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const reference = ref(db, "projects/" + projectId);
-    const index = reference.shareList.indexOf(userId);
-    // index < 0 means userid was not found, which is not impossible, but shouldn't happen
-    //   so it's just in case and so the program doesn't crash
-    if(index > -1) {
-        reference.shareList.splice(index, 1);
-    }
+/**
+ * Create a single file in a project (e.g. "main.c", "style.css")
+ */
+export function createFile(uid, projectId, fileName, initialContent = "") {
+  const filePath = `users/${uid}/projects/${projectId}/files/${fileName}`;
+  return set(ref(db, filePath), initialContent).catch(console.error);
 }
 
-// this ones iffy and probably doesn't work
-function deleteProject(projectId) {
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const reference = ref(db, "projects/" + projectId);
-    reference = null;
+/**
+ * Listen for all projects for a user
+ */
+export function onUserProjects(uid, callback) {
+  const projectsRef = ref(db, `users/${uid}/projects`);
+  onValue(projectsRef, (snapshot) => {
+    callback(snapshot.val());
+  });
 }
+
+/**
+ * [PLACEHOLDER] Listen for projects that have "uid" in their shareList
+ * For now, we do not have a real share listing. This shows how you'd do it later.
+ */
+export function onSharedProjects(uid, callback) {
+  // In a more advanced implementation, you'd do a scan or store an index of shared projects.
+  // For now, just pass an empty object to the callback.
+  callback({});}
