@@ -182,11 +182,15 @@ function initializeEditor() {
 // ------------------
 function loadFiles() {
   const fileListRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files`);
+  let hasAtLeastOneFile = false;
   // Listen for existing/new files
   onChildAdded(fileListRef, (snap) => {
+    hasAtLeastOneFile = true;
     const fileName = snap.key;       // e.g. "main.c"
-    const content = snap.val() || "";
-    createFileModel(fileName, content);
+    const fileObj = snap.val() || {};
+    const content = fileObj.content || "";
+    const lang = fileObj.lang || inferLanguageFromExtension(fileName);
+    createFileModel(fileName, content, lang);
     createTab(fileName);
     // If we have no open file yet, open this one
     if (!currentFileName) {
@@ -202,6 +206,14 @@ function loadFiles() {
       model.setValue(newContent);
     }
   });
+
+  onValue(fileListRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      // No files exist -> create an untitled.js by default
+      const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/untitled.js`);
+      set(fileRef, "// Your new file").catch(console.error);
+    }
+  });
   // Listen for removed files
   onChildRemoved(fileListRef, (snap) => {
     const fileName = snap.key;
@@ -210,11 +222,10 @@ function loadFiles() {
 }
 
 // Create a Monaco model for a file
-function createFileModel(fileName, content) {
+function createFileModel(fileName, content, lang) {
   if (modelsByFile[fileName]) return; // already exist
 
-  const language = inferLanguageFromExtension(fileName);
-  const model = monaco.editor.createModel(content, language);
+  const model = monaco.editor.createModel(content, lang);
   modelsByFile[fileName] = model;
 
   // Listen for local changes -> store to DB
@@ -226,8 +237,7 @@ function createFileModel(fileName, content) {
     const newVal = model.getValue();
 
     const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${fileName}`);
-    set(fileRef, newVal).catch(console.error);
-
+    update(fileRef, { content: newVal }).catch(console.error);
     // We'll reset after a small delay
     setTimeout(() => (isLocalChange = false), 100);
   });
@@ -307,18 +317,18 @@ addFileTab.addEventListener("click", () => {
 function inferLanguageFromExtension(fileName) {
   const ext = fileName.toLowerCase().split(".").pop();
   switch (ext) {
-    case "js":    return "javascript";
-    case "jsx":   return "javascript";
-    case "ts":    return "typescript";
-    case "html":  return "html";
-    case "css":   return "css";
-    case "c":     return "c";
+    case "js": return "javascript";
+    case "jsx": return "javascript";
+    case "ts": return "typescript";
+    case "html": return "html";
+    case "css": return "css";
+    case "c": return "c";
     case "cpp":
     case "cc":
-    case "cxx":   return "cpp";
-    case "h":     return "cpp"; // or c? depends on your preference
-    case "json":  return "json";
-    case "md":    return "markdown";
+    case "cxx": return "cpp";
+    case "h": return "cpp"; // or c? depends on your preference
+    case "json": return "json";
+    case "md": return "markdown";
     default:
       return "plaintext";
   }

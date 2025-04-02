@@ -158,22 +158,12 @@ function renderProjects(projectArray) {
     card.className = "project-card";
     card.innerHTML = `
       <div class="project-title">${proj.projectName || pid}</div>
-      <div class="project-lang">Lang: ${proj.language || "?"}</div>
       <div class="project-btns">
-        <button class="sec-btn create-file" data-pid="${pid}">+ File</button>
         <button class="sec-btn open-proj" data-pid="${pid}">Open</button>
         <button class="del-btn" data-pid="${pid}">Delete</button>
       </div>
     `;
     projectListEl.appendChild(card);
-
-    // Bind the buttons
-    const createFileBtn = card.querySelector(".create-file");
-    createFileBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      selectedProjectId = e.target.dataset.pid;
-      openFileModal();
-    });
 
     const openProjBtn = card.querySelector(".open-proj");
     openProjBtn.addEventListener("click", (e) => {
