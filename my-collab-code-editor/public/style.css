@@ -302,15 +302,18 @@ body {
 }
 
 .profile-button {
-  background: none;
+  background-color: #fa6c4d;
+  border-radius: 4px;
+  padding: 15px 24px;
   border: none;
   font-size: 1.1rem;
-  color: #ccc;
+  color: #fff;
   cursor: pointer;
   padding: 4px;
 }
 
 .profile-button:hover {
+  background-color: #e84343;
   color: #fff;
 }
 
