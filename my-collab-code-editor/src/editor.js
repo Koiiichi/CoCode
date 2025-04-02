@@ -231,7 +231,8 @@ function loadFiles() {
   });
 
   onValue(fileListRef, (snapshot) => {
-    if (!snapshot.exists()) {
+    const filesData = snapshot.val();
+    if (!snapshot.exists() || (filesData && Object.keys(filesData).length === 0)) {
       const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/untitled.js`);
       set(fileRef, {
         content: "// New file",
@@ -329,9 +330,7 @@ function removeTab(fileName) {
   }
 }
 
-// ------------------
 // “Add File” in tab bar
-// ------------------
 addFileTab.addEventListener("click", () => {
   const fileName = prompt("Enter new file name (e.g. main.c):");
   if (!fileName) return;

@@ -172,7 +172,7 @@ function renderProjects(projectArray) {
       // redirect to editor with ?project= param
       window.location.href = `editor.html?project=${pId}`;
     });
-
+    
     const deleteBtn = card.querySelector(".del-btn");
     deleteBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -180,7 +180,7 @@ function renderProjects(projectArray) {
       if (confirm(`Delete project "${pId}"? This cannot be undone.`)) {
         deleteProject(currentUser.uid, pId);
       }
-    });
+    });    
   });
 }
 
