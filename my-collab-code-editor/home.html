@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Home | CoCode</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="home-app">
+    <!-- Top Bar -->
+    <div class="title-bar">
+      <div class="title-left">
+        <img src="/assets/logo_white.png" class="editor-logo" alt="Logo" />
+        <span class="editor-title">CoCode Home</span>
+      </div>
+      <!-- Profile Menu -->
+      <div class="profile-menu">
+        <button class="profile-button">Profile</button>
+        <div class="profile-dropdown">
+          <!-- user info goes here -->
+          <button id="logout-button" class="logout-btn">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="home-layout">
+      <!-- LEFT SIDEBAR (FOLDERS) -->
+      <div class="home-sidebar">
+        <div class="folder-btn active" id="my-projects-btn">
+          <span>My Projects</span>
+        </div>
+        <div class="folder-btn" id="shared-with-me-btn">
+          <span>Shared with Me</span>
+        </div>
+      </div>
+
+      <!-- MAIN CONTENT -->
+      <div class="home-content">
+        <div class="home-header">
+          <h2 id="folder-title">My Projects</h2>
+          <button id="create-project-btn" class="primary-btn">+ New Project</button>
+        </div>
+        <div id="project-list" class="project-grid"></div>
+      </div>
+    </div>
+
+    <!-- FILE CREATION MODAL -->
+    <div class="modal" id="file-modal">
+      <div class="modal-content">
+        <h3>Create a new file</h3>
+        <input id="new-file-name" type="text" placeholder="e.g. main.c" />
+        <button id="confirm-create-file" class="primary-btn">Create</button>
+        <button id="cancel-create-file" class="secondary-btn">Cancel</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/home.js"></script>
+  </body>
+</html>

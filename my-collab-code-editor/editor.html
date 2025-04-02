@@ -9,6 +9,8 @@
     <!-- Header -->
     <div class="title-bar">
       <div class="title-left">
+        <!-- HOME button -->
+        <button id="home-button" class="home-btn">Home</button>
         <img src="/assets/logo_white.png" class="editor-logo" alt="Logo" />
         <span class="editor-title">CoCode</span>
       </div>
@@ -24,16 +26,40 @@
     <div class="editor-main">
       <!-- Sidebar -->
       <div class="sidebar">
-        <button title="Files">📁</button>
-        <button title="Search">🔍</button>
-        <button title="Settings">⚙️</button>
+        <button class="sidebar-btn" id="files-btn" title="Files">
+          <img src="/assets/files-icon.png" alt="Files" />
+        </button>
+        <button class="sidebar-btn" id="search-btn" title="Search">
+          <img src="/assets/search-icon.png" alt="Search" />
+        </button>
+        <button class="sidebar-btn" id="settings-btn" title="Settings">
+          <img src="/assets/settings-icon.png" alt="Settings" />
+        </button>
       </div>
 
       <!-- Editor Area -->
       <div class="editor-wrapper">
-        <div class="tab-bar">
-          <div class="tab active">index.js</div>
+        <!-- Slide-out Panels for Files, Search, Settings (placeholders) -->
+        <div class="slide-panel" id="files-panel">
+          <h3>Files Panel</h3>
+          <!-- Potentially list files or show project structure here -->
         </div>
+        <div class="slide-panel" id="search-panel">
+          <h3>Search Panel</h3>
+          <!-- Potentially implement search in the future -->
+        </div>
+        <div class="slide-panel" id="settings-panel">
+          <h3>Settings Panel</h3>
+          <!-- Potential theme, font-size, auto-save toggles in the future -->
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar" id="tab-bar">
+          <!-- Dynamic tabs get appended here. -->
+          <div class="tab-add" id="add-file-tab">➕</div>
+        </div>
+
+        <!-- Monaco Editor -->
         <div id="editor"></div>
       </div>
     </div>
