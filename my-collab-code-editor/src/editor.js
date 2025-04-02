@@ -9,6 +9,7 @@ import {
   getDatabase,
   ref,
   set,
+  update,
   onValue,
   onChildAdded,
   onChildChanged,
@@ -161,6 +162,25 @@ function togglePanel(panel) {
   }
 }
 
+document.addEventListener("click", (e) => {
+  // If click is outside of sidebar + panel area, close all
+  if (!sidebarContains(e.target) && !anyPanelContains(e.target)) {
+    [filesPanel, searchPanel, settingsPanel].forEach((p) => {
+      p.classList.remove("visible");
+      p.classList.add("hidden");
+    });
+  }
+});
+
+function sidebarContains(target) {
+  return filesBtn.contains(target) || searchBtn.contains(target) ||
+    settingsBtn.contains(target);
+}
+function anyPanelContains(target) {
+  return filesPanel.contains(target) || searchPanel.contains(target) ||
+    settingsPanel.contains(target);
+}
+
 // ------------------
 // Initialize Monaco
 // ------------------
@@ -186,24 +206,24 @@ function initializeEditor() {
 function loadFiles() {
   const fileListRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files`);
   let hasAtLeastOneFile = false;
-  // Listen for existing/new files
+  
   onChildAdded(fileListRef, (snap) => {
     hasAtLeastOneFile = true;
-    const fileName = snap.key;       // e.g. "main.c"
+    const fileName = snap.key;
     const fileObj = snap.val() || {};
-    const content = fileObj.content || "";
-    const lang = fileObj.lang || inferLanguageFromExtension(fileName);
-    createFileModel(fileName, content, lang);
+    const content = fileObj.content ?? "";
+    const fileType = fileObj.type ?? inferLanguageFromExtension(fileName);
+    createFileModel(fileName, content, fileType);
     createTab(fileName);
-    // If we have no open file yet, open this one
     if (!currentFileName) {
       switchFile(fileName);
     }
   });
-  // Listen for updated content
+
   onChildChanged(fileListRef, (snap) => {
     const fileName = snap.key;
-    const newContent = snap.val() || "";
+    const fileObj = snap.val() || {};
+    const newContent = fileObj.content ?? "";
     const model = modelsByFile[fileName];
     if (model && model.getValue() !== newContent) {
       model.setValue(newContent);
@@ -212,9 +232,11 @@ function loadFiles() {
 
   onValue(fileListRef, (snapshot) => {
     if (!snapshot.exists()) {
-      // No files exist -> create an untitled.js by default
       const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/untitled.js`);
-      set(fileRef, "// Your new file").catch(console.error);
+      set(fileRef, {
+        content: "// New file",
+        type: "javascript"
+      }).catch(console.error);
     }
   });
   // Listen for removed files
@@ -225,23 +247,27 @@ function loadFiles() {
 }
 
 // Create a Monaco model for a file
-function createFileModel(fileName, content, lang) {
-  if (modelsByFile[fileName]) return; // already exist
+function createFileModel(fileName, content, fileType) {
+  if (modelsByFile[fileName]) return;
 
-  const model = monaco.editor.createModel(content, lang);
+  const model = monaco.editor.createModel(content, fileType);
   modelsByFile[fileName] = model;
 
-  // Listen for local changes -> store to DB
   let isLocalChange = false;
   model.onDidChangeContent(() => {
-    // If this file is not the "active" file, we still store changes
-    // because user might have multiple files open, or do programmatic updates
     isLocalChange = true;
     const newVal = model.getValue();
-
     const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${fileName}`);
-    update(fileRef, { content: newVal }).catch(console.error);
-    // We'll reset after a small delay
+    
+    onValue(fileRef, (snap) => {
+      const existing = snap.val() || {};
+      const oldType = existing.type ?? inferLanguageFromExtension(fileName);
+      update(fileRef, {
+        content: newVal,
+        type: oldType
+      }).catch(console.error);
+    }, { onlyOnce: true });
+
     setTimeout(() => (isLocalChange = false), 100);
   });
 }
@@ -309,9 +335,16 @@ function removeTab(fileName) {
 addFileTab.addEventListener("click", () => {
   const fileName = prompt("Enter new file name (e.g. main.c):");
   if (!fileName) return;
-  // Create empty file in DB
+  if (!fileName.includes(".")) {
+    alert("File name must include an extension (e.g., main.js)");
+    return;
+  }
   const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${fileName}`);
-  set(fileRef, "").catch(console.error);
+  const inferredType = inferLanguageFromExtension(fileName);
+  set(fileRef, {
+    content: "// new file",
+    type: inferredType
+  }).catch(console.error);
 });
 
 // ------------------

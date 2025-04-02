@@ -54,24 +54,23 @@ export async function deleteProject(uid, projectId) {
 export function createFile(uid, projectId, fileName, initialContent = "") {
     const fileRef = ref(db, `users/${uid}/projects/${projectId}/files/${fileName}`);
     const ext = fileName.toLowerCase().split(".").pop();
-    const inferredLang = inferLanguage(ext); // a small helper function
+    const fileType = inferLanguage(ext);
     return set(fileRef, {
         content: initialContent,
-        lang: inferredLang
+        type: fileType
     }).catch(console.error);
 }
 
 function inferLanguage(ext) {
-
     switch (ext) {
         case "js": return "javascript";
         case "c": return "c";
         case "cpp": return "cpp";
+        case "html": return "html";
+        case "css": return "css";
         default: return "plaintext";
     }
 }
-
-
 
 /**
  * Listen for all projects for a user
