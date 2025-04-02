@@ -61,6 +61,20 @@ let modelsByFile = {};       // { "filename.ext": monacoEditorModel }
 let unsubscribesByFile = {}; // store onValue unsub functions if needed
 let currentFileName = null;  // which file is open in the editor?
 
+
+/**
+ * Encode a filename so it can be used as a Firebase key
+ * by replacing all forbidden characters (., #, $, [, ]).
+ */
+function encodeFirebaseKey(fileName) {
+  return encodeURIComponent(fileName)
+    .replace(/\./g, '%2E')
+    .replace(/\#/g, '%23')
+    .replace(/\$/g, '%24')
+    .replace(/\[/g, '%5B')
+    .replace(/\]/g, '%5D');
+}
+
 // ------------------
 // Auth
 // ------------------
@@ -357,20 +371,14 @@ function removeTab(fileName) {
 addFileTab.addEventListener("click", () => {
   const fileName = prompt("Enter new file name (e.g. main.c):");
   if (!fileName || fileName.trim() === "") return;
-  
-  if (!fileName.includes(".")) {
-    alert("File name must include an extension (e.g., main.js)");
-    return;
-  }
-  
+
   try {
-    // Encode file name for Firebase key usage
-    const encodedFileName = encodeURIComponent(fileName);
+    const encodedFileName = encodeFirebaseKey(fileName); // <-- Use new helper
     console.log("Creating file with encoded name:", encodedFileName);
-    
+
     const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
     const inferredType = inferLanguageFromExtension(fileName);
-    
+
     set(fileRef, {
       content: "// new file",
       type: inferredType
