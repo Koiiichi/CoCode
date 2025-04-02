@@ -208,10 +208,11 @@ function loadFiles() {
   const fileListRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files`);
   let hasAtLeastOneFile = false;
   
+  // Set up listener for existing files
   onChildAdded(fileListRef, (snap) => {
     hasAtLeastOneFile = true;
     const encodedFileName = snap.key;
-    // Decode the file name to use the original value.
+    // Decode the file name to use the original value
     const fileName = decodeURIComponent(encodedFileName);
     const fileObj = snap.val() || {};
     const content = fileObj.content ?? "";
@@ -221,8 +222,9 @@ function loadFiles() {
     if (!currentFileName) {
       switchFile(fileName);
     }
-  });  
+  });
 
+  // Set up listener for file changes
   onChildChanged(fileListRef, (snap) => {
     const encodedFileName = snap.key;
     const fileName = decodeURIComponent(encodedFileName);
@@ -234,25 +236,34 @@ function loadFiles() {
     }
   });
 
+  // Check if project is empty and create default file if needed
+  // This runs once when the editor loads
   onValue(fileListRef, (snapshot) => {
     const filesData = snapshot.val();
-    if (!snapshot.exists() || (filesData && Object.keys(filesData).length === 0)) {
+    if (!snapshot.exists() || !filesData || Object.keys(filesData || {}).length === 0) {
+      // Create default file with properly encoded name
       const defaultFileName = "untitled.js";
-      // Encode the default file name.
-      const encodedDefaultFileName = encodeURIComponent(defaultFileName);
-      const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedDefaultFileName}`);
+      const encodedFileName = encodeURIComponent(defaultFileName);
+      
+      console.log("Creating default file with encoded name:", encodedFileName);
+      
+      // Make sure the path is safe
+      const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
+      
+      // Create the file
       set(fileRef, {
-        content: "// New file",
+        content: "// New file - created as default",
         type: "javascript"
-      }).catch(console.error);
+      }).catch(err => console.error("Error creating default file:", err));
     }
-  });  
+  }, { onlyOnce: true }); // Only run this check once
+  
   // Listen for removed files
   onChildRemoved(fileListRef, (snap) => {
     const encodedFileName = snap.key;
     const fileName = decodeURIComponent(encodedFileName);
     removeTab(fileName);
-  });  
+  });
 }
 
 // Create a Monaco model for a file
@@ -345,19 +356,29 @@ function removeTab(fileName) {
 
 addFileTab.addEventListener("click", () => {
   const fileName = prompt("Enter new file name (e.g. main.c):");
-  if (!fileName) return;
+  if (!fileName || fileName.trim() === "") return;
+  
   if (!fileName.includes(".")) {
     alert("File name must include an extension (e.g., main.js)");
     return;
   }
-  // Encode file name for Firebase key usage.
-  const encodedFileName = encodeURIComponent(fileName);
-  const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
-  const inferredType = inferLanguageFromExtension(fileName);
-  set(fileRef, {
-    content: "// new file",
-    type: inferredType
-  }).catch(console.error);
+  
+  try {
+    // Encode file name for Firebase key usage
+    const encodedFileName = encodeURIComponent(fileName);
+    console.log("Creating file with encoded name:", encodedFileName);
+    
+    const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
+    const inferredType = inferLanguageFromExtension(fileName);
+    
+    set(fileRef, {
+      content: "// new file",
+      type: inferredType
+    }).catch(err => console.error("Error creating file:", err));
+  } catch (err) {
+    console.error("Error in file creation:", err);
+    alert("Could not create file. Error: " + err.message);
+  }
 });
 
 // ------------------
