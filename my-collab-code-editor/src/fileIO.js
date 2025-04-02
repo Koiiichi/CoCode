@@ -74,5 +74,4 @@ export function onUserProjects(uid, callback) {
 export function onSharedProjects(uid, callback) {
   // In a more advanced implementation, you'd do a scan or store an index of shared projects.
   // For now, just pass an empty object to the callback.
-  callback({});
-}
+  callback({});}
