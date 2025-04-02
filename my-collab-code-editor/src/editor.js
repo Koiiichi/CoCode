@@ -209,7 +209,9 @@ function loadFiles() {
   
   onChildAdded(fileListRef, (snap) => {
     hasAtLeastOneFile = true;
-    const fileName = snap.key;
+    const encodedFileName = snap.key;
+    // Decode the file name to use the original value.
+    const fileName = decodeURIComponent(encodedFileName);
     const fileObj = snap.val() || {};
     const content = fileObj.content ?? "";
     const fileType = fileObj.type ?? inferLanguageFromExtension(fileName);
@@ -218,7 +220,7 @@ function loadFiles() {
     if (!currentFileName) {
       switchFile(fileName);
     }
-  });
+  });  
 
   onChildChanged(fileListRef, (snap) => {
     const fileName = snap.key;
@@ -233,13 +235,16 @@ function loadFiles() {
   onValue(fileListRef, (snapshot) => {
     const filesData = snapshot.val();
     if (!snapshot.exists() || (filesData && Object.keys(filesData).length === 0)) {
-      const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/untitled.js`);
+      const defaultFileName = "untitled.js";
+      // Encode the default file name.
+      const encodedDefaultFileName = encodeURIComponent(defaultFileName);
+      const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedDefaultFileName}`);
       set(fileRef, {
         content: "// New file",
         type: "javascript"
       }).catch(console.error);
     }
-  });
+  });  
   // Listen for removed files
   onChildRemoved(fileListRef, (snap) => {
     const fileName = snap.key;
@@ -338,7 +343,9 @@ addFileTab.addEventListener("click", () => {
     alert("File name must include an extension (e.g., main.js)");
     return;
   }
-  const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${fileName}`);
+  // Encode file name for Firebase key usage.
+  const encodedFileName = encodeURIComponent(fileName);
+  const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
   const inferredType = inferLanguageFromExtension(fileName);
   set(fileRef, {
     content: "// new file",

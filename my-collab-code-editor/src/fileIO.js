@@ -52,7 +52,9 @@ export async function deleteProject(uid, projectId) {
  * Create a single file in a project (e.g. "main.c", "style.css")
  */
 export function createFile(uid, projectId, fileName, initialContent = "") {
-    const fileRef = ref(db, `users/${uid}/projects/${projectId}/files/${fileName}`);
+    // Encode the file name before using it as a key.
+    const encodedFileName = encodeURIComponent(fileName);
+    const fileRef = ref(db, `users/${uid}/projects/${projectId}/files/${encodedFileName}`);
     const ext = fileName.toLowerCase().split(".").pop();
     const fileType = inferLanguage(ext);
     return set(fileRef, {
