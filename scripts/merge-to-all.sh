@@ -13,19 +13,26 @@ show_help() {
     echo
     echo "Usage:"
     echo "  $0 <source-branch> [OPTIONS]"
-    echo "  $0 -c [OPTIONS]         # Use current branch as source"
+    echo "  $0 -c [OPTIONS]"
     echo
     echo "Options:"
-    echo "  -c, --current          Use current branch as source branch"
+    echo "  -c, --current          Use the current checked-out branch as source"
     echo "  --dry-run              Simulate merge operations without applying changes"
     echo "  --exclude BRANCH(ES)   One or more branches to exclude from the merge"
     echo "  --help                 Show this help message"
     echo
     echo "Examples:"
-    echo "  ./merge-to-all.sh feature/auth-frontend"
-    echo "  ./merge-to-all.sh -c                    # Use current branch as source"
-    echo "  ./merge-to-all.sh main --exclude feature/code-management"
-    echo "  ./merge-to-all.sh -c --dry-run --exclude main feature/global-cursor"
+    echo "  $0 feature/auth-frontend"
+    echo "    Merge 'feature/auth-frontend' into all other local branches"
+    echo
+    echo "  $0 -c"
+    echo "    Merge the current branch into all other branches"
+    echo
+    echo "  $0 main --exclude feature/code-management"
+    echo "    Merge 'main' into all other branches except 'feature/code-management'"
+    echo
+    echo "  $0 -c --dry-run --exclude main feature/global-cursor"
+    echo "    Simulate merging the current branch into all others, excluding 'main' and 'feature/global-cursor'"
     exit 0
 }
 
