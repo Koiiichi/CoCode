@@ -23,6 +23,12 @@ CoCode is a real-time collaborative coding environment designed to facilitate se
 - **AI-Powered Coding Assistance** (Future Implementation)
   - GPT-based code suggestions and debugging support
 
+## Git Scripts & Automation
+
+We use custom automation tools for managing branches and ensuring safe merges across environments.
+
+See [`scripts/README.md`](scripts/README.md) for full documentation.
+
 ## Contributing
 Contributions are welcome. Please submit pull requests or open issues to suggest improvements. Ensure that contributions align with the project goals and coding standards.
 
