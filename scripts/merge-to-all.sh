@@ -13,16 +13,19 @@ show_help() {
     echo
     echo "Usage:"
     echo "  $0 <source-branch> [OPTIONS]"
+    echo "  $0 -c [OPTIONS]         # Use current branch as source"
     echo
     echo "Options:"
+    echo "  -c, --current          Use current branch as source branch"
     echo "  --dry-run              Simulate merge operations without applying changes"
     echo "  --exclude BRANCH(ES)   One or more branches to exclude from the merge"
     echo "  --help                 Show this help message"
     echo
     echo "Examples:"
     echo "  ./merge-to-all.sh feature/auth-frontend"
+    echo "  ./merge-to-all.sh -c                    # Use current branch as source"
     echo "  ./merge-to-all.sh main --exclude feature/code-management"
-    echo "  ./merge-to-all.sh dev --dry-run --exclude main feature/global-cursor"
+    echo "  ./merge-to-all.sh -c --dry-run --exclude main feature/global-cursor"
     exit 0
 }
 
@@ -32,6 +35,7 @@ if [[ "$1" == "--help" ]]; then
 fi
 
 SOURCE_BRANCH=""
+USE_CURRENT=false
 DRY_RUN=false
 EXCLUDE_BRANCHES=()
 
@@ -39,6 +43,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --help)
       show_help
+      ;;
+    -c|--current)
+      USE_CURRENT=true
+      shift
       ;;
     --dry-run)
       DRY_RUN=true
@@ -64,8 +72,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$SOURCE_BRANCH" ]; then
+# === Get current branch if requested ===
+if $USE_CURRENT; then
+  SOURCE_BRANCH=$(git symbolic-ref --short HEAD)
+  if [ -z "$SOURCE_BRANCH" ]; then
+    echo "Error: Could not determine current branch."
+    exit 1
+  fi
+  echo "Using current branch: $SOURCE_BRANCH"
+elif [ -z "$SOURCE_BRANCH" ]; then
   echo "Usage: $0 <source-branch> [--dry-run] [--exclude <branch1> <branch2> ...]"
+  echo "   or: $0 -c [--dry-run] [--exclude <branch1> <branch2> ...]"
   echo "Use --help for more information."
   exit 1
 fi
@@ -87,12 +104,21 @@ for EX in "${EXCLUDE_BRANCHES[@]}"; do
   TARGET_BRANCHES=$(echo "$TARGET_BRANCHES" | grep -v "^$EX\$")
 done
 
-if $DRY_RUN && [ "${#EXCLUDE_BRANCHES[@]}" -gt 0 ]; then
-  echo "[Dry Run] Excluding the following branches:"
-  for EX in "${EXCLUDE_BRANCHES[@]}"; do
-    echo "  - $EX (manually excluded by --exclude)"
-  done
+if $DRY_RUN; then
+  echo "[Dry Run] Source branch: $SOURCE_BRANCH"
+  if [ "${#EXCLUDE_BRANCHES[@]}" -gt 0 ]; then
+    echo "[Dry Run] Excluding the following branches:"
+    for EX in "${EXCLUDE_BRANCHES[@]}"; do
+      echo "  - $EX (manually excluded by --exclude)"
+    done
+  fi
   echo
+fi
+
+# === Store original branch if using current ===
+ORIGINAL_BRANCH=""
+if $USE_CURRENT; then
+  ORIGINAL_BRANCH=$SOURCE_BRANCH
 fi
 
 # === Checkout and update source branch ===
@@ -148,4 +174,9 @@ for TARGET in $TARGET_BRANCHES; do
   fi
 done
 
-git checkout $SOURCE_BRANCH
+# Return to original branch if we started with -c
+if [ -n "$ORIGINAL_BRANCH" ]; then
+  git checkout $ORIGINAL_BRANCH
+else
+  git checkout $SOURCE_BRANCH
+fi
