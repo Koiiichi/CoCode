@@ -257,7 +257,7 @@ function loadFiles() {
     if (!snapshot.exists() || !filesData || Object.keys(filesData || {}).length === 0) {
       // Create default file with properly encoded name
       const defaultFileName = "untitled.js";
-      const encodedFileName = encodeURIComponent(defaultFileName);
+      const encodedFileName = encodeFirebaseKey(defaultFileName);
       
       console.log("Creating default file with encoded name:", encodedFileName);
       
@@ -293,7 +293,7 @@ function createFileModel(fileName, content, fileType) {
     isLocalChange = true;
     const newVal = model.getValue();
     // Encode the fileName for Firebase key usage.
-    const encodedFileName = encodeURIComponent(fileName);
+    const encodedFileName = encodeFirebaseKey(fileName);
     const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
     
     onValue(fileRef, (snap) => {
