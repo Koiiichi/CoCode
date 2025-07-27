@@ -15,6 +15,7 @@ import {
   onChildChanged,
   onChildRemoved,
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
+import { encodeFirebaseKey } from "/src/fileIO.js";
 
 // ------------------
 // Firebase Init
@@ -52,6 +53,9 @@ const settingsPanel = document.getElementById("settings-panel");
 // Tabs
 const tabBar = document.getElementById("tab-bar");
 const addFileTab = document.getElementById("add-file-tab");
+const importBtn = document.getElementById("import-file-btn");
+const exportBtn = document.getElementById("export-file-btn");
+const importInput = document.getElementById("import-file-input");
 let editor; // The Monaco editor instance
 
 // State
@@ -60,20 +64,6 @@ let currentProjectId = null;
 let modelsByFile = {};       // { "filename.ext": monacoEditorModel }
 let unsubscribesByFile = {}; // store onValue unsub functions if needed
 let currentFileName = null;  // which file is open in the editor?
-
-
-/**
- * Encode a filename so it can be used as a Firebase key
- * by replacing all forbidden characters (., #, $, [, ]).
- */
-function encodeFirebaseKey(fileName) {
-  return encodeURIComponent(fileName)
-    .replace(/\./g, '%2E')
-    .replace(/\#/g, '%23')
-    .replace(/\$/g, '%24')
-    .replace(/\[/g, '%5B')
-    .replace(/\]/g, '%5D');
-}
 
 // ------------------
 // Auth
@@ -257,7 +247,7 @@ function loadFiles() {
     if (!snapshot.exists() || !filesData || Object.keys(filesData || {}).length === 0) {
       // Create default file with properly encoded name
       const defaultFileName = "untitled.js";
-      const encodedFileName = encodeURIComponent(defaultFileName);
+      const encodedFileName = encodeFirebaseKey(defaultFileName);
       
       console.log("Creating default file with encoded name:", encodedFileName);
       
@@ -293,7 +283,7 @@ function createFileModel(fileName, content, fileType) {
     isLocalChange = true;
     const newVal = model.getValue();
     // Encode the fileName for Firebase key usage.
-    const encodedFileName = encodeURIComponent(fileName);
+    const encodedFileName = encodeFirebaseKey(fileName);
     const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
     
     onValue(fileRef, (snap) => {
@@ -388,6 +378,54 @@ addFileTab.addEventListener("click", () => {
     alert("Could not create file. Error: " + err.message);
   }
 });
+
+// ------------------
+// File Import/Export
+// ------------------
+if (importBtn && importInput) {
+  importBtn.addEventListener("click", () => importInput.click());
+  importInput.addEventListener("change", handleImportFile);
+}
+
+if (exportBtn) {
+  exportBtn.addEventListener("click", exportCurrentFile);
+}
+
+function exportCurrentFile() {
+  if (!currentFileName) {
+    alert("No file open to export");
+    return;
+  }
+  const model = modelsByFile[currentFileName];
+  const content = model ? model.getValue() : "";
+  const blob = new Blob([content], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = currentFileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function handleImportFile(e) {
+  const file = e.target.files[0];
+  if (!file || !currentUser || !currentProjectId) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const content = evt.target.result;
+    const fileName = file.name;
+    const encodedFileName = encodeFirebaseKey(fileName);
+    const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
+    set(fileRef, {
+      content,
+      type: inferLanguageFromExtension(fileName)
+    }).catch(console.error);
+  };
+  reader.readAsText(file);
+  importInput.value = "";
+}
 
 // ------------------
 // Infer language from extension

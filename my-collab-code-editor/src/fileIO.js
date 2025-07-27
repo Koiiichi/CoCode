@@ -22,6 +22,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// Encode filenames safely for Firebase keys
+export function encodeFirebaseKey(fileName) {
+    return encodeURIComponent(fileName)
+        .replace(/\./g, '%2E')
+        .replace(/\#/g, '%23')
+        .replace(/\$/g, '%24')
+        .replace(/\[/g, '%5B')
+        .replace(/\]/g, '%5D');
+}
+
 /**
  * Create a new project under the user's account.
  * @param {string} uid User ID of the current user
@@ -54,7 +64,7 @@ export async function deleteProject(uid, projectId) {
 
 export function createFile(uid, projectId, fileName, initialContent = "") {
     // Encode the file name before using it as a key.
-    const encodedFileName = encodeURIComponent(fileName);
+    const encodedFileName = encodeFirebaseKey(fileName);
     const fileRef = ref(db, `users/${uid}/projects/${projectId}/files/${encodedFileName}`);
     const ext = fileName.toLowerCase().split(".").pop();
     const fileType = inferLanguage(ext);
