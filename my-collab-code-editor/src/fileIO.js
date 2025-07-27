@@ -19,6 +19,7 @@ const firebaseConfig = {
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -61,7 +62,6 @@ export async function deleteProject(uid, projectId) {
 /**
  * Create a single file in a project (e.g. "main.c", "style.css")
  */
-
 export function createFile(uid, projectId, fileName, initialContent = "") {
     // Encode the file name before using it as a key.
     const encodedFileName = encodeFirebaseKey(fileName);
