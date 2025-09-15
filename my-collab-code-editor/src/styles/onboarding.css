@@ -1,0 +1,331 @@
+/* CoCode Onboarding Modal Styles */
+
+.onboarding-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.onboarding-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.onboarding-modal .modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(138, 138, 255, 0.1) 0%, rgba(92, 92, 224, 0.1) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.onboarding-content {
+  width: 480px;
+  max-width: 90vw;
+  max-height: 90vh;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-brd);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  z-index: var(--z-modal);
+  overflow: hidden;
+  animation: slideInUp 0.4s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.onboarding-header {
+  text-align: center;
+  padding: var(--space-6) var(--space-5) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.welcome-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--space-4);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-weak) 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.welcome-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.onboarding-header h2 {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0 0 var(--space-2) 0;
+  letter-spacing: -0.02em;
+}
+
+.onboarding-header p {
+  font-size: var(--text-base);
+  color: var(--fg-muted);
+  margin: 0;
+}
+
+.onboarding-body {
+  padding: var(--space-5);
+  min-height: 280px;
+}
+
+.onboarding-step {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.onboarding-step.hidden {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.onboarding-step h3 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-group label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg);
+  margin-bottom: var(--space-2);
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.form-group input::placeholder {
+  color: var(--fg-muted);
+}
+
+.success-content {
+  text-align: center;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto var(--space-4);
+  background: linear-gradient(135deg, var(--success) 0%, #2ea86a 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  animation: successPulse 0.6s ease-out;
+}
+
+@keyframes successPulse {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.success-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.success-content p {
+  font-size: var(--text-lg);
+  color: var(--fg);
+  margin: 0 0 var(--space-5) 0;
+}
+
+.feature-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: left;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-elev-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
+}
+
+.feature-item:hover {
+  background: var(--bg-elev-2);
+  border-color: var(--accent);
+}
+
+.feature-item svg {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.feature-item span {
+  font-size: var(--text-sm);
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.onboarding-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--bg-elev-1);
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.onboarding-actions .btn.hidden {
+  display: none;
+}
+
+/* Onboarding notifications */
+.onboarding-notification {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  z-index: calc(var(--z-modal) + 1);
+  animation: slideInRight 0.3s ease-out;
+}
+
+.onboarding-notification.error {
+  background: rgba(255, 91, 87, 0.1);
+  color: var(--danger);
+  border: 1px solid rgba(255, 91, 87, 0.2);
+}
+
+.onboarding-notification.success {
+  background: rgba(63, 191, 127, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(63, 191, 127, 0.2);
+}
+
+.onboarding-notification svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Global success notification (outside modal) */
+body > .onboarding-notification {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  z-index: var(--z-tooltip);
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .onboarding-content {
+    width: 95vw;
+    margin: var(--space-4);
+  }
+  
+  .onboarding-header {
+    padding: var(--space-5) var(--space-4) var(--space-3);
+  }
+  
+  .onboarding-body {
+    padding: var(--space-4);
+    min-height: 240px;
+  }
+  
+  .onboarding-footer {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+  
+  .onboarding-actions {
+    justify-content: center;
+  }
+  
+  .feature-highlights {
+    gap: var(--space-2);
+  }
+  
+  .feature-item {
+    padding: var(--space-2);
+  }
+}

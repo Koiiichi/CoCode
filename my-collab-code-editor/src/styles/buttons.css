@@ -1,0 +1,199 @@
+/* CoCode Button System */
+
+/* Base button styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elev-1);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+}
+
+/* Button sizes */
+.btn-sm {
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.btn-md {
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.btn-lg {
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  font-size: var(--text-base);
+}
+
+/* Button variants */
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  border-color: transparent;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-primary:active:not(:disabled) {
+  background: var(--accent-weak);
+}
+
+.btn-neutral {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-brd);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.btn-neutral:hover:not(:disabled) {
+  background: var(--bg-elev-2);
+  border-color: var(--border);
+}
+
+.btn-danger {
+  background: rgba(255, 91, 87, 0.1);
+  color: var(--danger);
+  border-color: rgba(255, 91, 87, 0.2);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 91, 87, 0.15);
+  border-color: rgba(255, 91, 87, 0.3);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg-elev-1);
+}
+
+/* Button states */
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Icon-only buttons */
+.btn-icon {
+  min-width: 36px;
+  padding: 0;
+}
+
+.btn-icon.btn-sm {
+  min-width: 28px;
+}
+
+.btn-icon.btn-lg {
+  min-width: 44px;
+}
+
+/* Button groups */
+.btn-group {
+  display: inline-flex;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.btn-group .btn {
+  border-radius: 0;
+  border-right-width: 0;
+}
+
+.btn-group .btn:first-child {
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+}
+
+.btn-group .btn:last-child {
+  border-top-right-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+  border-right-width: 1px;
+}
+
+/* Legacy button class mappings for compatibility */
+.primary-btn {
+  @apply btn btn-primary btn-md;
+}
+
+.secondary-btn {
+  @apply btn btn-neutral btn-md;
+}
+
+.tab-action-btn {
+  @apply btn btn-ghost btn-sm;
+}
+
+.home-btn {
+  @apply btn btn-ghost btn-sm;
+}
+
+.profile-button {
+  @apply btn btn-ghost btn-icon btn-sm;
+}
+
+.logout-btn {
+  @apply btn btn-danger btn-sm;
+}
+
+.sidebar-toggle {
+  @apply btn btn-ghost btn-icon btn-sm;
+}
+
+.close-btn {
+  @apply btn btn-ghost btn-icon btn-sm;
+}
+
+/* Icon styles within buttons */
+.btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.btn-sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-lg svg {
+  width: 18px;
+  height: 18px;
+}

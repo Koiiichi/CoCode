@@ -3,38 +3,91 @@
   <head>
     <meta charset="UTF-8" />
     <title>CoCode Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/theme.css" />
+    <link rel="stylesheet" href="/src/styles/buttons.css" />
+    <link rel="stylesheet" href="/src/styles/onboarding.css" />
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body class="editor-app">
     <!-- Header -->
-    <div class="title-bar">
+    <div class="title-bar glass">
       <div class="title-left">
-        <!-- HOME button -->
-        <button id="home-button" class="home-btn">Home</button>
-        <img src="/assets/logo_white.png" class="editor-logo" alt="Logo" />
+        <img src="/assets/logo_white.png" class="editor-logo" alt="CoCode Logo" />
         <span class="editor-title">CoCode</span>
       </div>
-      <div class="profile-menu">
-        <button class="profile-button">👤</button>
-        <div class="profile-dropdown">
-          <button id="logout-button" class="logout-btn">Logout</button>
+      <div class="title-center">
+        <nav class="breadcrumb">
+          <button id="home-button" class="btn btn-ghost btn-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9,22 9,12 15,12 15,22"/>
+            </svg>
+            Home
+          </button>
+        </nav>
+      </div>
+      <div class="title-right">
+        <div class="toolbar-actions">
+          <button class="btn btn-ghost btn-icon" id="sidebarToggle" title="Toggle Sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" x2="20" y1="6" y2="6"/>
+              <line x1="4" x2="20" y1="12" y2="12"/>
+              <line x1="4" x2="20" y1="18" y2="18"/>
+            </svg>
+          </button>
+          <button class="btn btn-ghost btn-icon" id="commentsToggle" title="Toggle Comments Panel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+          <button class="btn btn-ghost btn-icon" id="devLogsToggle" title="Toggle Dev Logs (Ctrl+Shift+L)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+          </button>
+          <button class="btn btn-ghost btn-icon" id="theme-toggle" title="Toggle Theme">
+            <svg class="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+            <svg class="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="m12 2v2"/>
+              <path d="m12 20v2"/>
+              <path d="m4.93 4.93 1.41 1.41"/>
+              <path d="m17.66 17.66 1.41 1.41"/>
+              <path d="M2 12h2"/>
+              <path d="M20 12h2"/>
+              <path d="m6.34 17.66-1.41 1.41"/>
+              <path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+          </button>
+        </div>
+        <div class="profile-menu">
+          <button class="btn btn-ghost btn-icon profile-button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </button>
+          <div class="profile-dropdown glass">
+            <button id="logout-button" class="btn btn-danger btn-sm">Logout</button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Main Editor Layout -->
-    <div class="editor-main">
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <button class="sidebar-btn" id="files-btn" title="Files">
-          <img src="/assets/files-icon.png" alt="Files" />
-        </button>
-        <button class="sidebar-btn" id="search-btn" title="Search">
-          <img src="/assets/search-icon.png" alt="Search" />
-        </button>
-        <button class="sidebar-btn" id="settings-btn" title="Settings">
-          <img src="/assets/settings-icon.png" alt="Settings" />
-        </button>
+    <div class="main-container">
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+          <div class="file-explorer">
+            <h3>Files</h3>
+            <div id="file-list"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Editor Area -->
@@ -53,21 +106,85 @@
           <!-- Potential theme, font-size, auto-save toggles in the future -->
         </div>
 
-        <!-- Tab Bar -->
-        <div class="tab-bar" id="tab-bar">
-          <!-- Dynamic tabs get appended here. -->
-          <div class="tab-add" id="add-file-tab" title="Add File">
-            <img src="/assets/add-icon.png" alt="Add File" />
-          </div>                  
-        </div>
-
         <!-- Monaco Editor -->
         <div id="editor"></div>
+        
+        <!-- Tab Bar (moved to bottom for now, will be repositioned with CSS) -->
+        <div class="tab-bar" id="tab-bar">
+          <!-- Dynamic tabs get appended here. -->
+          <div class="tab-actions">
+            <button class="btn btn-ghost btn-sm" id="import-files-btn" title="Import Files">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7,10 12,5 17,10"/>
+                <line x1="12" x2="12" y1="5" y2="15"/>
+              </svg>
+              Import
+            </button>
+            <button class="btn btn-ghost btn-sm" id="export-file-btn" title="Export Current File">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+                <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/>
+                <path d="M7 3v4a1 1 0 0 0 1 1h8"/>
+              </svg>
+              Export File
+            </button>
+            <button class="btn btn-ghost btn-sm" id="export-project-btn" title="Export Project">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="20" height="5" x="2" y="3" rx="1"/>
+                <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/>
+                <path d="M10 12h4"/>
+              </svg>
+              Export Project
+            </button>
+          </div>
+          <div class="tab-add" id="add-file-tab" title="Add File">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"/>
+              <path d="m12 5v14"/>
+            </svg>
+          </div>                  
+        </div>
+      </div>
+      
+      <!-- Comments Panel -->
+      <div id="comments-panel" class="hidden">
+        <div class="panel-header">
+          <h3>Comments</h3>
+        </div>
+        <div class="comments-content">
+          <div class="comments-list" id="comments-list">
+            <div class="no-comments">No comments yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Comment Modal -->
+    <div id="comment-modal" class="comment-modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 id="modal-title">Add Comment</h4>
+          <button class="close-btn" id="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="comment-context" id="comment-context">
+            <div class="line-info" id="line-info">Line 1</div>
+            <div class="code-preview" id="code-preview">// Code context will appear here</div>
+          </div>
+          <textarea id="comment-text" placeholder="Enter your comment..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="secondary-btn" id="cancel-comment">Cancel</button>
+          <button class="primary-btn" id="save-comment">Save Comment</button>
+        </div>
       </div>
     </div>
 
     <!-- Monaco Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <script type="module" src="/src/theme/themeManager.js"></script>
     <script type="module" src="/src/editor.js"></script>
   </body>
 </html>

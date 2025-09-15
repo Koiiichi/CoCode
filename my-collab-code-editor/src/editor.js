@@ -15,6 +15,17 @@ import {
   onChildChanged,
   onChildRemoved,
 } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
+import { PresenceManager } from "./editor/presence.js";
+import { ImportExportManager } from "./editor/importExport.js";
+import { CodeRunner } from "./editor/runner.js";
+import { CommentsManager } from "./editor/comments.js";
+import { FileTreeManager } from "./editor/fileTree.js";
+import { ConflictHandler } from "./editor/conflictHandler.js";
+import { DevLogsManager } from "./editor/devLogs.js";
+import { TelemetryManager } from "./editor/telemetry.js";
+import { OnboardingManager } from "./onboarding/onboardingManager.js";
+import { themeManager } from "./theme/themeManager.js";
+import { encodeFirebaseKey } from "./firebase/paths.js";
 
 // ------------------
 // Firebase Init
@@ -39,6 +50,7 @@ const profileButton = document.querySelector(".profile-button");
 const profileDropdown = document.querySelector(".profile-dropdown");
 const profileMenu = document.querySelector(".profile-menu");
 const logoutButton = document.getElementById("logout-button");
+const themeToggle = document.getElementById("theme-toggle");
 const homeButton = document.getElementById("home-button");
 
 // Slide panels
@@ -60,20 +72,14 @@ let currentProjectId = null;
 let modelsByFile = {};       // { "filename.ext": monacoEditorModel }
 let unsubscribesByFile = {}; // store onValue unsub functions if needed
 let currentFileName = null;  // which file is open in the editor?
-
-
-/**
- * Encode a filename so it can be used as a Firebase key
- * by replacing all forbidden characters (., #, $, [, ]).
- */
-function encodeFirebaseKey(fileName) {
-  return encodeURIComponent(fileName)
-    .replace(/\./g, '%2E')
-    .replace(/\#/g, '%23')
-    .replace(/\$/g, '%24')
-    .replace(/\[/g, '%5B')
-    .replace(/\]/g, '%5D');
-}
+let presenceManager = null;  // presence and cursor tracking
+let importExportManager = null;  // file import/export functionality
+let codeRunner = null;  // code execution and preview
+let commentsManager = null;  // inline commenting system
+let fileTreeManager = null;  // folder/directory structure
+let conflictHandler = null;  // conflict detection and resolution
+let devLogs = null;  // development logs panel
+let telemetry = null;  // usage analytics and metrics
 
 // ------------------
 // Auth
@@ -96,6 +102,39 @@ onAuthStateChanged(auth, (user) => {
   }
   currentProjectId = projectId;
 
+  // Initialize presence manager
+  presenceManager = new PresenceManager(auth, projectId);
+  
+  // Initialize import/export manager
+  importExportManager = new ImportExportManager(currentUser, projectId);
+  codeRunner = new CodeRunner();
+  commentsManager = new CommentsManager(db, auth, editor, projectId);
+  fileTreeManager = new FileTreeManager(db, auth, projectId, loadFile);
+  conflictHandler = new ConflictHandler(db, auth, editor, projectId);
+  devLogs = new DevLogsManager();
+  telemetryManager = new TelemetryManager();
+  onboardingManager = new OnboardingManager();
+
+  // Ensure editor layout is correct after all managers are initialized
+  setTimeout(() => {
+    editor.layout();
+    // Ensure editor container is properly positioned
+    const editorWrapper = document.querySelector('.editor-wrapper');
+    if (editorWrapper) {
+      editorWrapper.style.position = 'relative';
+      editorWrapper.style.overflow = 'hidden';
+    }
+  }, 200);
+
+  window.devLogs = devLogs; // Make globally available
+  window.telemetryManager = telemetryManager; // Make globally available
+
+  // Track session start
+  telemetryManager.trackSession(currentUser.uid, projectId);
+  
+  // Check if user needs onboarding
+  checkAndShowOnboarding(currentUser);
+
   initializeEditor(); // sets up Monaco
   loadFiles();        // fetches the project's files from DB
 });
@@ -111,13 +150,35 @@ function insertUserInfo(user) {
       </div>
     `;
     // re-bind the logout
-    document.getElementById("logout-button").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        window.location.href = "login.html";
-      });
-    });
+    document.getElementById("logout-button").addEventListener("click", handleLogout);
   }
 }
+
+// Event Listeners
+logoutButton?.addEventListener("click", handleLogout);
+document.getElementById("home-button")?.addEventListener("click", () => {
+  window.location.href = "/home.html";
+});
+
+// Theme toggle event listener
+themeToggle?.addEventListener("click", () => {
+  themeManager.toggle();
+});
+
+// Update theme icons based on current theme
+window.addEventListener('themechange', (e) => {
+  const { effectiveTheme } = e.detail;
+  const darkIcon = themeToggle?.querySelector('.theme-icon-dark');
+  const lightIcon = themeToggle?.querySelector('.theme-icon-light');
+  
+  if (effectiveTheme === 'dark') {
+    darkIcon.style.display = 'block';
+    lightIcon.style.display = 'none';
+  } else {
+    darkIcon.style.display = 'none';
+    lightIcon.style.display = 'block';
+  }
+});
 
 // ------------------
 // Buttons & Dropdown
@@ -132,18 +193,6 @@ if (profileButton && profileDropdown) {
     if (profileMenu && !profileMenu.contains(evt.target)) {
       profileDropdown.classList.remove("show");
     }
-  });
-}
-
-if (logoutButton) {
-  logoutButton.addEventListener("click", () => {
-    signOut(auth).then(() => (window.location.href = "login.html"));
-  });
-}
-
-if (homeButton) {
-  homeButton.addEventListener("click", () => {
-    window.location.href = "home.html";
   });
 }
 
@@ -199,18 +248,103 @@ function anyPanelContains(target) {
 // Initialize Monaco
 // ------------------
 function initializeEditor() {
-  require.config({
-    paths: {
-      vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs",
-    },
-  });
-
-  require(["vs/editor/editor.main"], () => {
-    editor = monaco.editor.create(document.getElementById("editor"), {
-      value: "// Loading...",
+  require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs" } });
+  require(["vs/editor/editor.main"], function () {
+    const editorContainer = document.getElementById("editor");
+    
+    // Ensure editor container has proper dimensions
+    editorContainer.style.height = '100%';
+    editorContainer.style.width = '100%';
+    editorContainer.style.position = 'relative';
+    editorContainer.style.zIndex = '1';
+    
+    editor = monaco.editor.create(editorContainer, {
+      value: "",
       language: "javascript",
-      theme: "vs-dark",
+      theme: themeManager.getEffectiveCurrentTheme() === 'dark' ? "vs-dark" : "vs",
+      automaticLayout: true,
+      minimap: { enabled: false },
+      fontSize: 14,
+      lineNumbers: "on",
+      renderWhitespace: "selection",
+      scrollBeyondLastLine: false,
+      wordWrap: "on",
+      // Critical: ensure editor is focusable and interactive
+      readOnly: false,
+      domReadOnly: false,
     });
+    
+    // Force layout after creation
+    setTimeout(() => {
+      editor.layout();
+      editor.focus();
+    }, 100);
+    
+    // Update Monaco theme when app theme changes
+    window.addEventListener('themechange', (e) => {
+      const { effectiveTheme } = e.detail;
+      monaco.editor.setTheme(effectiveTheme === 'dark' ? 'vs-dark' : 'vs');
+    });
+
+    // Initialize presence after editor is ready
+    if (presenceManager && currentUser) {
+      presenceManager.initialize(currentUser, editor);
+    }
+    
+    // Add code runner toggle to UI
+    if (codeRunner) {
+      codeRunner.addRunnerToggle();
+      // Make modelsByFile available globally for runner
+      window.modelsByFile = modelsByFile;
+    }
+    
+    // Initialize comments manager
+    if (commentsManager) {
+      commentsManager.initialize(editor);
+    }
+    
+    // Initialize file tree manager
+    if (fileTreeManager) {
+      fileTreeManager.initialize(
+        (fileName, filePath) => switchToFile(fileName), // onFileSelect
+        (fileName, filePath) => {
+          // onFileCreate - refresh file list and switch to new file
+          loadFiles();
+          setTimeout(() => switchToFile(fileName), 100);
+        },
+        (fileName) => {
+          // onFileDelete - close tab if it's open
+          const tab = document.querySelector(`[data-filename="${fileName}"]`);
+          if (tab) {
+            tab.remove();
+            delete modelsByFile[fileName];
+            if (currentFileName === fileName) {
+              // Switch to first available file
+              const remainingFiles = Object.keys(modelsByFile);
+              if (remainingFiles.length > 0) {
+                switchToFile(remainingFiles[0]);
+              } else {
+                currentFileName = null;
+                if (editor) editor.setModel(null);
+              }
+            }
+          }
+        }
+      );
+    }
+    
+    // Initialize conflict handler
+    if (conflictHandler) {
+      conflictHandler.initialize((fileName, resolvedContent) => {
+        // onConflictResolved - update the model with resolved content
+        const model = modelsByFile[fileName];
+        if (model && model.getValue() !== resolvedContent) {
+          model.setValue(resolvedContent);
+        }
+        // Update tab styling to remove conflict indicator
+        updateTabConflictStatus(fileName, false);
+      });
+    }
   });
 }
 
@@ -289,17 +423,26 @@ function createFileModel(fileName, content, fileType) {
   modelsByFile[fileName] = model;
 
   let isLocalChange = false;
-  model.onDidChangeContent(() => {
+  model.onDidChangeContent(async () => {
     isLocalChange = true;
     const newVal = model.getValue();
-    // Encode the fileName for Firebase key usage.
-    const encodedFileName = encodeFirebaseKey(fileName);
-    const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
     
-    onValue(fileRef, (snap) => {
+    // Check for conflicts before saving
+    if (conflictHandler) {
+      const canSave = await conflictHandler.prepareSave(fileName, newVal);
+      if (!canSave) {
+        // Conflict detected, handler will show resolution UI
+        updateTabConflictStatus(fileName, true);
+        return;
+      }
+    }
+    
+    // Encode the fileName for Firebase key usage
+    const encodedFileName = encodeFirebaseKey(fileName);
+    onValue(ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`), (snap) => {
       const existing = snap.val() || {};
       const oldType = existing.type ?? inferLanguageFromExtension(fileName);
-      update(fileRef, {
+      update(ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`), {
         content: newVal,
         type: oldType
       }).catch(console.error);
@@ -307,6 +450,11 @@ function createFileModel(fileName, content, fileType) {
 
     setTimeout(() => (isLocalChange = false), 100);
   });
+  
+  // Register file with conflict handler
+  if (conflictHandler) {
+    conflictHandler.registerFile(fileName);
+  }
 }
 
 // Switch the editor to the given file’s model
@@ -315,6 +463,16 @@ function switchFile(fileName) {
   const model = modelsByFile[fileName];
   if (model && editor) {
     editor.setModel(model);
+  }
+
+  // Update presence manager with current file
+  if (presenceManager) {
+    presenceManager.switchFile(fileName);
+  }
+  
+  // Update comments manager with current file
+  if (commentsManager) {
+    commentsManager.switchFile(fileName);
   }
 
   // update tab active state
@@ -361,37 +519,116 @@ function removeTab(fileName) {
     if (otherFiles.length > 0) {
       switchFile(otherFiles[0]);
     } else {
-      editor.setValue("// No files open");
+      currentFileName = null;
+      if (editor) editor.setModel(null);
     }
   }
 }
 
-// “Add File” in tab bar
+// ------------------
+// Import/Export Event Handlers
+// ------------------
 
-addFileTab.addEventListener("click", () => {
-  const fileName = prompt("Enter new file name (e.g. main.c):");
-  if (!fileName || fileName.trim() === "") return;
-
+// Import files button
+document.getElementById("import-files-btn")?.addEventListener("click", async () => {
+  if (!importExportManager) return;
+  
   try {
-    const encodedFileName = encodeFirebaseKey(fileName); // <-- Use new helper
-    console.log("Creating file with encoded name:", encodedFileName);
+    const importedFiles = await importExportManager.importFiles();
+    if (importedFiles.length > 0) {
+      importExportManager.showImportProgress(importedFiles);
+    }
+  } catch (error) {
+    console.error("Import failed:", error);
+    alert("Failed to import files: " + error.message);
+  }
+});
 
-    const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
-    const inferredType = inferLanguageFromExtension(fileName);
+// Export current file button
+document.getElementById("export-file-btn")?.addEventListener("click", () => {
+  if (!importExportManager || !currentFileName) {
+    alert("No file is currently open");
+    return;
+  }
+  
+  const model = modelsByFile[currentFileName];
+  if (!model) {
+    alert("No content to export");
+    return;
+  }
+  
+  const content = model.getValue();
+  importExportManager.exportFile(currentFileName, content);
+  importExportManager.showExportProgress('file', currentFileName);
+});
 
-    set(fileRef, {
-      content: "// new file",
-      type: inferredType
-    }).catch(err => console.error("Error creating file:", err));
-  } catch (err) {
-    console.error("Error in file creation:", err);
-    alert("Could not create file. Error: " + err.message);
+// Export project button
+document.getElementById("export-project-btn")?.addEventListener("click", async () => {
+  if (!importExportManager) return;
+  
+  try {
+    // Get current project data
+    const projectRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}`);
+    onValue(projectRef, async (snapshot) => {
+      const projectData = snapshot.val();
+      if (projectData) {
+        const projectName = projectData.projectName || currentProjectId;
+        await importExportManager.exportProject(projectData, projectName);
+        importExportManager.showExportProgress('project', `${projectName}.zip`);
+      } else {
+        alert("No project data found");
+      }
+    }, { onlyOnce: true });
+  } catch (error) {
+    console.error("Export failed:", error);
+    alert("Failed to export project: " + error.message);
+  }
+});
+
+// Comments toggle button
+document.getElementById("commentsToggle")?.addEventListener("click", () => {
+  if (commentsManager) {
+    commentsManager.togglePanel();
+  }
+});
+
+// Dev logs toggle button
+document.getElementById("devLogsToggle")?.addEventListener("click", () => {
+  if (devLogs) {
+    devLogs.toggle();
+    telemetry?.trackFeatureUsage('dev_logs', 'toggle');
+  }
+});
+
+// “Add File” in tab bar - delegate to file tree manager if available
+addFileTab.addEventListener("click", () => {
+  if (fileTreeManager) {
+    fileTreeManager.createFile();
+  } else {
+    // Fallback to original behavior
+    const fileName = prompt("Enter new file name (e.g. main.c):");
+    if (!fileName || fileName.trim() === "") return;
+
+    try {
+      const encodedFileName = encodeFirebaseKey(fileName);
+      console.log("Creating file with encoded name:", encodedFileName);
+
+      const fileRef = ref(db, `users/${currentUser.uid}/projects/${currentProjectId}/files/${encodedFileName}`);
+      const inferredType = inferLanguageFromExtension(fileName);
+
+      set(fileRef, {
+        content: "// new file",
+        type: inferredType
+      }).catch(err => console.error("Error creating file:", err));
+    } catch (error) {
+      console.error("Error with file creation:", error);
+      alert("Failed to create file. Please try again.");
+    }
   }
 });
 
 // ------------------
 // Infer language from extension
-// ------------------
 function inferLanguageFromExtension(fileName) {
   const ext = fileName.toLowerCase().split(".").pop();
   switch (ext) {
@@ -409,5 +646,17 @@ function inferLanguageFromExtension(fileName) {
     case "md": return "markdown";
     default:
       return "plaintext";
+  }
+}
+
+// Update tab conflict status indicator
+function updateTabConflictStatus(fileName, hasConflict) {
+  const tab = document.querySelector(`[data-filename="${fileName}"]`);
+  if (tab) {
+    if (hasConflict) {
+      tab.classList.add('has-conflict');
+    } else {
+      tab.classList.remove('has-conflict');
+    }
   }
 }

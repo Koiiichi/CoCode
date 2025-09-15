@@ -1,0 +1,34 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "projects": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "files": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "presence": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "cursors": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "comments": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
