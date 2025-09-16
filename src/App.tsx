@@ -118,17 +118,6 @@ function HomePage() {
             Toggle Theme
           </Button>
         </div>
-
-        {/* Status */}
-        <div className="pt-8 text-sm text-muted">
-          <p>🚧 CoCode is being rebuilt from scratch with React + TypeScript</p>
-          <p className="mt-2">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 text-accent">
-              <Icon name="wrench" size="xs" />
-              PR1: Scaffold + Theme - In Progress
-            </span>
-          </p>
-        </div>
       </div>
     </div>
   );
