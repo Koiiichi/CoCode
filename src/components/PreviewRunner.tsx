@@ -334,7 +334,7 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted text-sm">
               <div className="text-center max-w-xs px-6">
-                <Icon name="file-code" size="lg" className="mx-auto mb-3 opacity-50" />
+                <Icon name="code" size="lg" className="mx-auto mb-3 opacity-50" />
                 <p>Create an HTML, CSS, or JavaScript file to see the live preview here.</p>
               </div>
             </div>
