@@ -183,7 +183,7 @@ npm run build
 
 ## Deployment
 
-The application is deployed on [Vercel](https://your-vercel-link.vercel.app).
+The application is deployed on [Vercel](https://co-c0de.vercel.app/).
 
 <div style="border-left: 4px solid #1e88e5; padding: 0.75em 1em; background: #f5faff;">
 <strong>Info:</strong> Configure your environment variables in the Vercel dashboard (<code>Project Settings &gt; Environment Variables</code>) before deploying. Automatic builds are triggered from the main branch.
