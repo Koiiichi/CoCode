@@ -1,6 +1,6 @@
 // CoCode Preview Runner Component
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
@@ -18,6 +18,13 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
   const [lastRunContent, setLastRunContent] = useState<string>('');
   const [previewConsoleMessages, setPreviewConsoleMessages] = useState<Array<{type: 'log' | 'error' | 'warn' | 'info', content: string, timestamp: number}>>([]);
   const [showPreviewConsole, setShowPreviewConsole] = useState(false);
+  const hasPreviewContent = useMemo(() => Object.keys(files).some(path => /\.(html|css|js)$/i.test(path)), [files]);
+
+  const pushConsoleMessage = useCallback((type: 'log' | 'error' | 'warn' | 'info', content: string) => {
+    const message = { type, content, timestamp: Date.now() };
+    setPreviewConsoleMessages(prev => [...prev, message]);
+    onConsoleMessage?.(message);
+  }, [onConsoleMessage]);
 
   const generatePreviewHTML = () => {
     const htmlFile = Object.entries(files).find(([path]) => path.endsWith('.html'))?.[1]?.content || '';
@@ -140,17 +147,19 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
 
     try {
       const html = generatePreviewHTML();
-      
+
       // Basic HTML validation
       validateHTML(html);
-      
+
       setLastRunContent(html);
-      
+
       if (iframeRef.current) {
         iframeRef.current.srcdoc = html;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to run preview');
+      const message = err instanceof Error ? err.message : 'Failed to run preview';
+      setError(message);
+      pushConsoleMessage('error', message);
     } finally {
       setIsRunning(false);
     }
@@ -163,9 +172,9 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
     commonTags.forEach(tag => {
       const openCount = (html.match(new RegExp(`<${tag}[^>]*>`, 'gi')) || []).length;
       const closeCount = (html.match(new RegExp(`</${tag}>`, 'gi')) || []).length;
-      
+
       if (openCount !== closeCount) {
-        console.warn(`HTML Warning: Mismatched <${tag}> tags (${openCount} open, ${closeCount} close)`);
+        pushConsoleMessage('warn', `HTML warning: mismatched <${tag}> tags (${openCount} open, ${closeCount} close)`);
       }
     });
 
@@ -173,7 +182,7 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
     const imgTags = html.match(/<img[^>]*>/gi) || [];
     imgTags.forEach((img, index) => {
       if (!img.includes('alt=')) {
-        console.warn(`HTML Accessibility Warning: Image ${index + 1} missing alt attribute`);
+        pushConsoleMessage('warn', `Accessibility warning: image ${index + 1} missing alt attribute`);
       }
     });
   };
@@ -230,19 +239,13 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
           timestamp: event.data.timestamp
         };
         
-        // Add to preview console
-        setPreviewConsoleMessages(prev => [...prev, message]);
-        
-        // Also send to main console if callback provided
-        if (onConsoleMessage) {
-          onConsoleMessage(message);
-        }
+        pushConsoleMessage(message.type, message.content);
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onConsoleMessage]);
+  }, [pushConsoleMessage]);
 
   // Auto-run with debounce when enabled
   useEffect(() => {
@@ -256,20 +259,7 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [files, autoRun, lastRunContent]);
-
-  // Initial run when files change (if not auto-run)
-  useEffect(() => {
-    if (autoRun) return;
-    
-    const hasWebFiles = Object.keys(files).some(path => 
-      path.endsWith('.html') || path.endsWith('.css') || path.endsWith('.js')
-    );
-    
-    if (hasWebFiles && !lastRunContent) {
-      runPreview();
-    }
-  }, [files, autoRun, lastRunContent]);
+  }, [files, autoRun, lastRunContent, pushConsoleMessage]);
 
   return (
     <div className="h-full flex flex-col bg-bg-1">
@@ -285,7 +275,7 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
             size="sm"
             icon="play"
             onClick={runPreview}
-            disabled={isRunning}
+            disabled={isRunning || !hasPreviewContent}
             title="Run Preview"
           >
             {isRunning ? 'Running...' : 'Run'}
@@ -305,6 +295,7 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
             icon="settings"
             onClick={() => onAutoRunChange?.(!autoRun)}
             title={autoRun ? "Disable Auto-run" : "Enable Auto-run"}
+            disabled={!hasPreviewContent}
           >
             Auto
           </Button>
@@ -333,12 +324,21 @@ export function PreviewRunner({ files, onConsoleMessage, autoRun = false, onAuto
       {/* Preview Content */}
       <div className="flex-1 flex flex-col">
         <div className={`flex-1 relative ${showPreviewConsole ? 'h-1/2' : ''}`}>
-          <iframe
-            ref={iframeRef}
-            className="w-full h-full border-0"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            title="Code Preview"
-          />
+          {hasPreviewContent ? (
+            <iframe
+              ref={iframeRef}
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              title="Code Preview"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted text-sm">
+              <div className="text-center max-w-xs px-6">
+                <Icon name="file-code" size="lg" className="mx-auto mb-3 opacity-50" />
+                <p>Create an HTML, CSS, or JavaScript file to see the live preview here.</p>
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Preview Console */}

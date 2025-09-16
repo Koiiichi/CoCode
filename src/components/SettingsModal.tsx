@@ -72,8 +72,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-bg/95 backdrop-blur-xl border border-border/50 shadow-2xl p-6 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex justify-center items-center sm:pt-0 pt-20 z-50 px-4 pb-6">
+      <div className="w-full max-w-2xl rounded-2xl border border-border/40 bg-bg/85 shadow-2xl backdrop-blur-2xl p-6 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-fg">Settings</h2>

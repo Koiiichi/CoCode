@@ -8,6 +8,8 @@ import { FileTreeItem as FileTreeComponent } from '@/components/FileTreeItem';
 import { cn } from '@/lib/utils';
 import type { FileItem } from '@/hooks/useFiles';
 
+type CreateType = 'file' | 'folder';
+
 export interface SidebarProps {
   projectName?: string;
   files?: Record<string, FileItem>;
@@ -136,6 +138,70 @@ function FilesPanel({
   onFileDelete?: (path: string) => Promise<boolean>;
   onFileRename?: (oldPath: string, newPath: string) => Promise<boolean>;
 }) {
+  const [rootCreateType, setRootCreateType] = React.useState<CreateType | null>(null);
+  const [rootNewName, setRootNewName] = React.useState('');
+  const [rootSubmitting, setRootSubmitting] = React.useState(false);
+  const rootInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (rootCreateType) {
+      const id = window.setTimeout(() => rootInputRef.current?.focus(), 0);
+      return () => window.clearTimeout(id);
+    }
+  }, [rootCreateType]);
+
+  const handleStartRootCreate = (type: CreateType) => {
+    setRootCreateType(type);
+    setRootNewName('');
+  };
+
+  const handleCancelRootCreate = () => {
+    setRootCreateType(null);
+    setRootNewName('');
+    setRootSubmitting(false);
+  };
+
+  const handleCommitRootCreate = async () => {
+    if (!rootCreateType || rootSubmitting) return;
+
+    const trimmed = rootNewName.trim();
+    if (!trimmed) {
+      handleCancelRootCreate();
+      return;
+    }
+
+    setRootSubmitting(true);
+
+    try {
+      let success = true;
+      if (rootCreateType === 'file') {
+        const result = await onFileCreate?.(trimmed, '');
+        success = result !== false;
+      } else {
+        const result = await onFolderCreate?.(trimmed);
+        success = result !== false;
+      }
+
+      if (success) {
+        handleCancelRootCreate();
+      } else {
+        setRootSubmitting(false);
+      }
+    } catch (error) {
+      console.error('Failed to create item', error);
+      setRootSubmitting(false);
+    }
+  };
+
+  const handleRootKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void handleCommitRootCreate();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      handleCancelRootCreate();
+    }
+  };
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -143,29 +209,19 @@ function FilesPanel({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-fg">Explorer</h3>
           <div className="flex gap-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              icon="plus" 
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="plus"
               title="New file"
-              onClick={() => {
-                const fileName = prompt('Enter file name:');
-                if (fileName && onFileCreate) {
-                  onFileCreate(fileName, '');
-                }
-              }}
+              onClick={() => handleStartRootCreate('file')}
             />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              icon="folder" 
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="folder"
               title="New folder"
-              onClick={() => {
-                const folderName = prompt('Enter folder name:');
-                if (folderName && onFolderCreate) {
-                  onFolderCreate(folderName);
-                }
-              }}
+              onClick={() => handleStartRootCreate('folder')}
             />
           </div>
         </div>
@@ -176,6 +232,22 @@ function FilesPanel({
         {projectName && (
           <div className="mb-2 text-xs font-medium text-muted uppercase tracking-wide">
             {projectName}
+          </div>
+        )}
+        {rootCreateType && (
+          <div className="flex items-center gap-2 px-2 py-1 text-sm">
+            <Icon name={rootCreateType === 'file' ? 'file' : 'folder'} size="sm" className="text-muted" />
+            <input
+              ref={rootInputRef}
+              type="text"
+              value={rootNewName}
+              onChange={(event) => setRootNewName(event.target.value)}
+              onBlur={() => void handleCommitRootCreate()}
+              onKeyDown={handleRootKeyDown}
+              disabled={rootSubmitting}
+              placeholder={rootCreateType === 'file' ? 'New file name' : 'New folder name'}
+              className="flex-1 px-2 py-1 bg-bg border border-border rounded text-fg text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+            />
           </div>
         )}
         {fileTree.length === 0 ? (
@@ -189,24 +261,12 @@ function FilesPanel({
                 key={item.path}
                 item={item}
                 level={0}
-                isSelected={selectedFile === item.path}
-                onSelect={() => onFileSelect?.(item.path)}
+                selectedPath={selectedFile || undefined}
+                onSelect={(file) => onFileSelect?.(file.path)}
                 onRename={(oldPath, newPath) => onFileRename?.(oldPath, newPath)}
-                onDelete={() => onFileDelete?.(item.path)}
-                onCreateFile={(parentPath) => {
-                  const fileName = prompt('Enter file name:');
-                  if (fileName && onFileCreate) {
-                    const fullPath = parentPath ? `${parentPath}/${fileName}` : fileName;
-                    onFileCreate(fullPath, '');
-                  }
-                }}
-                onCreateFolder={(parentPath) => {
-                  const folderName = prompt('Enter folder name:');
-                  if (folderName && onFolderCreate) {
-                    const fullPath = parentPath ? `${parentPath}/${folderName}` : folderName;
-                    onFolderCreate(fullPath);
-                  }
-                }}
+                onDelete={(path) => onFileDelete?.(path)}
+                onCreateFile={(path) => onFileCreate?.(path, '')}
+                onCreateFolder={(path) => onFolderCreate?.(path)}
               />
             ))}
           </div>

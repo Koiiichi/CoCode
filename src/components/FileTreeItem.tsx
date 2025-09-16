@@ -1,100 +1,179 @@
 // CoCode File Tree Item Component
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { cn } from '@/lib/utils';
 import { getFileIcon } from '@/lib/encoding';
 import type { FileItem } from '@/hooks/useFiles';
 
+type CreateType = 'file' | 'folder';
+
+type MaybePromise<T> = T | Promise<T>;
+
 interface FileTreeItemProps {
   item: FileItem;
   level: number;
-  isSelected?: boolean;
+  selectedPath?: string | null;
   onSelect?: (item: FileItem) => void;
-  onRename?: (oldPath: string, newPath: string) => void;
-  onDelete?: (path: string) => void;
-  onCreateFile?: (parentPath: string) => void;
-  onCreateFolder?: (parentPath: string) => void;
+  onRename?: (oldPath: string, newPath: string) => MaybePromise<boolean | void>;
+  onDelete?: (path: string) => MaybePromise<boolean | void>;
+  onCreateFile?: (path: string, content?: string) => MaybePromise<boolean | void>;
+  onCreateFolder?: (path: string) => MaybePromise<boolean | void>;
 }
 
 export function FileTreeItem({
   item,
   level,
-  isSelected = false,
+  selectedPath,
   onSelect,
   onRename,
   onDelete,
   onCreateFile,
   onCreateFolder,
 }: FileTreeItemProps) {
-  const [isOpen, setIsOpen] = useState(level === 0);
+  const [isOpen, setIsOpen] = useState(item.isFolder ? level === 0 : false);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(item.name);
-  const [showActions, setShowActions] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [createType, setCreateType] = useState<CreateType | null>(null);
+  const [newItemName, setNewItemName] = useState('');
+  const [isSubmittingCreation, setIsSubmittingCreation] = useState(false);
 
-  const hasChildren = item.isFolder && item.children && item.children.length > 0;
-  const canToggle = item.isFolder;
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
 
-  const handleToggle = () => {
-    if (canToggle) {
-      setIsOpen(!isOpen);
+  const isSelected = selectedPath === item.path;
+  const hasChildren = useMemo(
+    () => Boolean(item.isFolder && item.children && item.children.length > 0),
+    [item.isFolder, item.children]
+  );
+
+  useEffect(() => {
+    if (isEditing) {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    }
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (createType) {
+      setTimeout(() => createInputRef.current?.focus(), 0);
+    }
+  }, [createType]);
+
+  const toggleOpen = () => {
+    if (item.isFolder) {
+      setIsOpen(prev => !prev);
     }
   };
 
   const handleSelect = () => {
-    if (!item.isFolder) {
+    if (item.isFolder) {
+      toggleOpen();
+    } else {
       onSelect?.(item);
     }
   };
 
-  const handleStartEdit = () => {
+  const handleStartRename = () => {
+    setEditName(item.name);
     setIsEditing(true);
-    setEditName(item.name);
   };
 
-  const handleCancelEdit = () => {
+  const handleCancelRename = () => {
     setIsEditing(false);
     setEditName(item.name);
   };
 
-  const handleSaveEdit = () => {
-    if (editName.trim() && editName !== item.name) {
-      const pathParts = item.path.split('/');
-      pathParts[pathParts.length - 1] = editName.trim();
-      const newPath = pathParts.join('/');
-      onRename?.(item.path, newPath);
+  const handleRename = async () => {
+    const nextName = editName.trim();
+    if (!nextName || nextName === item.name) {
+      handleCancelRename();
+      return;
     }
+
+    const pathParts = item.path.split('/');
+    pathParts[pathParts.length - 1] = nextName;
+    const newPath = pathParts.join('/');
+
+    if (onRename) {
+      const result = await onRename(item.path, newPath);
+      if (result === false) {
+        return;
+      }
+    }
+
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSaveEdit();
-    } else if (e.key === 'Escape') {
-      handleCancelEdit();
+  const handleRenameKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void handleRename();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      handleCancelRename();
     }
   };
 
-  const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete ${item.isFolder ? 'folder' : 'file'} "${item.name}"?`)) {
-      onDelete?.(item.path);
+  const handleDelete = async () => {
+    await onDelete?.(item.path);
+  };
+
+  const beginCreate = (type: CreateType) => {
+    if (!item.isFolder) return;
+    if (!isOpen) setIsOpen(true);
+    setCreateType(type);
+    setNewItemName('');
+  };
+
+  const cancelCreate = () => {
+    setCreateType(null);
+    setNewItemName('');
+    setIsSubmittingCreation(false);
+  };
+
+  const commitCreate = async () => {
+    if (!createType || isSubmittingCreation) return;
+
+    const trimmedName = newItemName.trim();
+    if (!trimmedName) {
+      cancelCreate();
+      return;
+    }
+
+    setIsSubmittingCreation(true);
+    try {
+      const fullPath = `${item.path}/${trimmedName}`;
+      let success = true;
+
+      if (createType === 'file') {
+        const result = await onCreateFile?.(fullPath, '');
+        success = result !== false;
+      } else {
+        const result = await onCreateFolder?.(fullPath);
+        success = result !== false;
+      }
+
+      if (success) {
+        cancelCreate();
+      } else {
+        setIsSubmittingCreation(false);
+      }
+    } catch (error) {
+      console.error('Failed to create item', error);
+      setIsSubmittingCreation(false);
     }
   };
 
-  const handleCreateFile = () => {
-    const fileName = prompt('Enter file name:');
-    if (fileName?.trim()) {
-      const filePath = item.isFolder ? `${item.path}/${fileName.trim()}` : fileName.trim();
-      onCreateFile?.(filePath);
-    }
-  };
-
-  const handleCreateFolder = () => {
-    const folderName = prompt('Enter folder name:');
-    if (folderName?.trim()) {
-      const folderPath = item.isFolder ? `${item.path}/${folderName.trim()}` : folderName.trim();
-      onCreateFolder?.(folderPath);
+  const handleCreateKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      void commitCreate();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelCreate();
     }
   };
 
@@ -102,62 +181,54 @@ export function FileTreeItem({
     <div>
       <div
         className={cn(
-          'group flex items-center gap-2 px-2 py-1 text-sm rounded hover:bg-bg-2 transition-colors',
+          'group flex items-center gap-2 px-2 py-1 text-sm rounded transition-colors',
           'cursor-pointer select-none',
-          isSelected && 'bg-accent/10 text-accent',
-          !item.isFolder && 'hover:text-fg',
-          item.isFolder && 'text-muted hover:text-fg'
+          item.isFolder ? 'text-muted hover:text-fg' : 'hover:text-fg',
+          isSelected && 'bg-accent/10 text-accent'
         )}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
-        onMouseEnter={() => setShowActions(true)}
-        onMouseLeave={() => setShowActions(false)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
-        {/* Toggle Icon */}
-        {canToggle && (
+        {item.isFolder && (
           <button
-            onClick={handleToggle}
-            className="flex items-center justify-center w-4 h-4 hover:bg-bg-1 rounded transition-colors"
+            onClick={toggleOpen}
+            className="flex items-center justify-center w-4 h-4 rounded hover:bg-bg-1 transition-colors"
+            aria-label={isOpen ? 'Collapse folder' : 'Expand folder'}
           >
-            <Icon 
-              name={isOpen ? 'chevron-down' : 'chevron-right'} 
-              size="xs" 
-            />
+            <Icon name={isOpen ? 'chevron-down' : 'chevron-right'} size="xs" />
           </button>
         )}
-        
-        {/* File/Folder Icon */}
-        <Icon 
-          name={getFileIcon(item.name, item.isFolder)} 
-          size="sm" 
+
+        <Icon
+          name={getFileIcon(item.name, item.isFolder)}
+          size="sm"
           className={cn(
-            item.isFolder 
-              ? (isOpen ? 'text-accent' : 'text-muted')
+            item.isFolder
+              ? isOpen
+                ? 'text-accent'
+                : 'text-muted'
               : 'text-muted'
           )}
         />
 
-        {/* Name */}
         {isEditing ? (
           <input
+            ref={editInputRef}
             type="text"
             value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            onBlur={handleSaveEdit}
-            onKeyDown={handleKeyDown}
+            onChange={(event) => setEditName(event.target.value)}
+            onBlur={() => void handleRename()}
+            onKeyDown={handleRenameKeyDown}
             className="flex-1 px-1 py-0 bg-bg border border-border rounded text-fg text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-            autoFocus
           />
         ) : (
-          <span 
-            className="flex-1 truncate"
-            onClick={item.isFolder ? handleToggle : handleSelect}
-          >
+          <span className="flex-1 truncate" onClick={handleSelect}>
             {item.name}
           </span>
         )}
 
-        {/* Actions */}
-        {showActions && !isEditing && (
+        {hovered && !isEditing && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {item.isFolder && (
               <>
@@ -165,17 +236,17 @@ export function FileTreeItem({
                   variant="ghost"
                   size="sm"
                   icon="plus"
-                  onClick={handleCreateFile}
                   className="w-6 h-6 p-0"
                   title="New file"
+                  onClick={() => beginCreate('file')}
                 />
                 <Button
                   variant="ghost"
                   size="sm"
                   icon="folder"
-                  onClick={handleCreateFolder}
                   className="w-6 h-6 p-0"
                   title="New folder"
+                  onClick={() => beginCreate('folder')}
                 />
               </>
             )}
@@ -183,31 +254,54 @@ export function FileTreeItem({
               variant="ghost"
               size="sm"
               icon="edit"
-              onClick={handleStartEdit}
               className="w-6 h-6 p-0"
               title="Rename"
+              onClick={handleStartRename}
             />
             <Button
               variant="ghost"
               size="sm"
               icon="trash"
-              onClick={handleDelete}
               className="w-6 h-6 p-0 text-danger hover:text-danger"
               title="Delete"
+              onClick={() => void handleDelete()}
             />
           </div>
         )}
       </div>
 
-      {/* Children */}
-      {canToggle && isOpen && hasChildren && (
+      {createType && (
+        <div
+          className="flex items-center gap-2 px-2 py-1 text-sm"
+          style={{ paddingLeft: `${(level + 1) * 12 + 8}px` }}
+        >
+          <Icon
+            name={createType === 'file' ? getFileIcon('file.txt', false) : getFileIcon('folder', true)}
+            size="sm"
+            className="text-muted"
+          />
+          <input
+            ref={createInputRef}
+            type="text"
+            value={newItemName}
+            onChange={(event) => setNewItemName(event.target.value)}
+            onBlur={() => void commitCreate()}
+            onKeyDown={handleCreateKeyDown}
+            disabled={isSubmittingCreation}
+            placeholder={createType === 'file' ? 'New file name' : 'New folder name'}
+            className="flex-1 px-1 py-0 bg-bg border border-border rounded text-fg text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </div>
+      )}
+
+      {item.isFolder && isOpen && hasChildren && (
         <div>
           {item.children!.map((child) => (
             <FileTreeItem
               key={child.path}
               item={child}
               level={level + 1}
-              isSelected={isSelected}
+              selectedPath={selectedPath}
               onSelect={onSelect}
               onRename={onRename}
               onDelete={onDelete}

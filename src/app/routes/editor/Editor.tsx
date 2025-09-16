@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AppShell } from '@/layout/AppShell';
 import { useProjects } from '@/hooks/useProjects';
-import { useFiles } from '@/hooks/useFiles';
+import { useFiles, type FileItem } from '@/hooks/useFiles';
 import { useSettings } from '@/hooks/useSettings';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
@@ -25,7 +25,7 @@ export function Editor() {
   const [showPreview, setShowPreview] = useState(false);
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [autoRun, setAutoRun] = useState(false);
-  const [navigateToLine, setNavigateToLine] = useState<number | undefined>(undefined);
+  const [navigateTarget, setNavigateTarget] = useState<{ line: number; token: number } | null>(null);
   
   const { settings } = useSettings();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,6 +45,21 @@ export function Editor() {
   // Find current project
   const currentProject = projects.find(p => p.id === projectId);
 
+  const findFileInTree = (items: FileItem[], targetPath: string): FileItem | null => {
+    for (const item of items) {
+      if (item.path === targetPath) {
+        return item;
+      }
+      if (item.isFolder && item.children) {
+        const found = findFileInTree(item.children, targetPath);
+        if (found) {
+          return found;
+        }
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
     if (!projectId) {
       navigate('/home');
@@ -54,15 +69,17 @@ export function Editor() {
 
   // Initialize file buffers when files are loaded
   useEffect(() => {
-    const newBuffers: Record<string, string> = {};
-    Object.entries(files).forEach(([path, file]) => {
-      if (!fileBuffers[path]) {
-        newBuffers[path] = file.content || '';
-      }
+    setFileBuffers(prev => {
+      const updated = { ...prev };
+      let changed = false;
+      Object.entries(files).forEach(([path, file]) => {
+        if (!(path in updated)) {
+          updated[path] = file.content || '';
+          changed = true;
+        }
+      });
+      return changed ? updated : prev;
     });
-    if (Object.keys(newBuffers).length > 0) {
-      setFileBuffers(prev => ({ ...prev, ...newBuffers }));
-    }
   }, [files]);
 
   // Get current file content from buffer or files
@@ -136,31 +153,38 @@ export function Editor() {
   };
 
   // Handle file selection and tab management
-  const handleFileSelect = async (filePath: string) => {
-    // Auto-save current file on blur if enabled
+  const handleFileSelect = useCallback(async (filePath: string) => {
     if (selectedFile && settings.autoSave.mode === 'onBlur' && dirtyFiles.has(selectedFile)) {
       await handleFileSave(selectedFile);
     }
-    
+
     setSelectedFile(filePath);
-    setNavigateToLine(undefined); // Clear navigation when switching files
-    
-    // Add to open tabs if not already open
-    if (!openTabs.includes(filePath)) {
-      setOpenTabs(prev => [...prev, filePath]);
-    }
-    
-    // Initialize buffer if not exists
-    if (!fileBuffers[filePath] && files[filePath]) {
-      setFileBuffers(prev => ({ ...prev, [filePath]: files[filePath].content || '' }));
-    }
-  };
+    setNavigateTarget(null);
+
+    setOpenTabs(prev => (prev.includes(filePath) ? prev : [...prev, filePath]));
+
+    setFileBuffers(prev => {
+      if (prev[filePath] || !files[filePath]) {
+        return prev;
+      }
+      return { ...prev, [filePath]: files[filePath].content || '' };
+    });
+  }, [selectedFile, settings.autoSave.mode, dirtyFiles, handleFileSave, files]);
 
   // Handle navigation to specific line in file
   const handleNavigateToLine = async (filePath: string, lineNumber: number) => {
     await handleFileSelect(filePath);
-    setNavigateToLine(lineNumber);
+    setNavigateTarget({ line: lineNumber, token: Date.now() });
   };
+
+  const handleFileCreate = useCallback(async (path: string, content = '') => {
+    const success = await createFile(path, content);
+    if (success) {
+      setFileBuffers(prev => ({ ...prev, [path]: content }));
+      await handleFileSelect(path);
+    }
+    return success;
+  }, [createFile, handleFileSelect]);
 
   // Handle file rename - update tabs and selected file
   const handleFileRename = async (oldPath: string, newPath: string) => {
@@ -168,27 +192,88 @@ export function Editor() {
     if (success) {
       // Update open tabs
       setOpenTabs(prev => prev.map(tab => tab === oldPath ? newPath : tab));
-      
+
       // Update selected file if it was the renamed file
       if (selectedFile === oldPath) {
         setSelectedFile(newPath);
       }
+
+      // Preserve buffer content
+      setFileBuffers(prev => {
+        if (!(oldPath in prev)) return prev;
+        const { [oldPath]: buffer, ...rest } = prev;
+        return { ...rest, [newPath]: buffer };
+      });
+
+      setDirtyFiles(prev => {
+        if (!prev.has(oldPath)) return prev;
+        const updated = new Set(prev);
+        updated.delete(oldPath);
+        updated.add(newPath);
+        return updated;
+      });
     }
     return success;
   };
 
   // Handle file deletion - close tab and update selection
   const handleFileDelete = async (filePath: string) => {
+    const item = findFileInTree(fileTree, filePath);
+    const isFolder = item?.isFolder ?? false;
+    const affectedPaths = Object.keys(files).filter(path => path === filePath || path.startsWith(`${filePath}/`));
+    const visibleAffectedPaths = affectedPaths.filter(path => !path.endsWith('/.gitkeep'));
+
+    let confirmMessage = `Delete ${isFolder ? 'folder' : 'file'} "${item?.name || filePath}"?`;
+
+    if (isFolder) {
+      const nestedCount = visibleAffectedPaths.length;
+      const hasContent = visibleAffectedPaths.some(path => {
+        const file = files[path];
+        if (!file) return false;
+        const content = getCurrentFileContent(path);
+        return content.trim().length > 0;
+      });
+
+      if (nestedCount > 0) {
+        confirmMessage = `Delete folder "${item?.name || filePath}" and its ${nestedCount} item${nestedCount === 1 ? '' : 's'}?`;
+        if (hasContent) {
+          confirmMessage += ' This will remove files with unsaved changes.';
+        }
+      }
+    } else {
+      const content = getCurrentFileContent(filePath);
+      if (content.trim().length > 0) {
+        confirmMessage = `File "${item?.name || filePath}" has content. Delete it anyway?`;
+      }
+    }
+
+    if (!window.confirm(confirmMessage)) {
+      return false;
+    }
+
     const success = await deleteFileOrFolder(filePath);
     if (success) {
-      // Remove from open tabs
-      setOpenTabs(prev => prev.filter(tab => tab !== filePath));
-      
-      // Update selected file if it was the deleted file
-      if (selectedFile === filePath) {
-        const remainingTabs = openTabs.filter(tab => tab !== filePath);
-        setSelectedFile(remainingTabs.length > 0 ? remainingTabs[remainingTabs.length - 1] : null);
-      }
+      setFileBuffers(prev => {
+        const updated = { ...prev };
+        affectedPaths.forEach(path => {
+          delete updated[path];
+        });
+        return updated;
+      });
+
+      setDirtyFiles(prev => {
+        const updated = new Set(prev);
+        affectedPaths.forEach(path => updated.delete(path));
+        return updated;
+      });
+
+      setOpenTabs(prev => {
+        const updated = prev.filter(tab => !affectedPaths.includes(tab));
+        if (selectedFile && affectedPaths.includes(selectedFile)) {
+          setSelectedFile(updated.length > 0 ? updated[updated.length - 1] : null);
+        }
+        return updated;
+      });
     }
     return success;
   };
@@ -226,7 +311,7 @@ export function Editor() {
   const handleImport = async (importedFiles: Record<string, { content: string; type: string }>) => {
     try {
       for (const [path, file] of Object.entries(importedFiles)) {
-        await createFile(path, file.content);
+        await handleFileCreate(path, file.content);
       }
     } catch (error) {
       console.error('Failed to import files:', error);
@@ -234,17 +319,17 @@ export function Editor() {
     }
   };
 
-  // Check if project has HTML files for preview
-  const hasHtmlFiles = Object.keys(files).some(path => path.endsWith('.html'));
+  // Check if project has previewable files for preview
+  const hasPreviewableFiles = Object.keys(files).some(path => /\.(html|css|js)$/i.test(path));
 
-  // Only show preview when HTML files exist
+  // Only show preview when previewable files exist
   useEffect(() => {
-    if (hasHtmlFiles && !showPreview) {
+    if (hasPreviewableFiles && !showPreview) {
       setShowPreview(true);
-    } else if (!hasHtmlFiles && showPreview) {
+    } else if (!hasPreviewableFiles && showPreview) {
       setShowPreview(false);
     }
-  }, [hasHtmlFiles, showPreview]);
+  }, [hasPreviewableFiles, showPreview]);
 
   if (!projectId) {
     return null;
@@ -286,9 +371,10 @@ export function Editor() {
       fileTree={fileTree}
       selectedFile={selectedFile}
       openTabs={openTabs}
+      dirtyFiles={dirtyFiles}
       onFileSelect={handleFileSelect}
       onTabClose={handleTabClose}
-      onFileCreate={createFile}
+      onFileCreate={handleFileCreate}
       onFolderCreate={createFolder}
       onFileDelete={handleFileDelete}
       onFileRename={handleFileRename}
@@ -321,10 +407,10 @@ export function Editor() {
             >
               Save
             </Button>
-            {hasHtmlFiles && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+            {hasPreviewableFiles && (
+              <Button
+                variant="ghost"
+                size="sm"
                 icon={showPreview ? "eye-off" : "eye"}
                 onClick={() => setShowPreview(!showPreview)}
               >
@@ -344,7 +430,7 @@ export function Editor() {
                 onChange={handleFileContentChange}
                 filename={selectedFile}
                 onSave={() => handleFileSave(selectedFile)}
-                navigateToLine={navigateToLine}
+                navigateTarget={navigateTarget}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-center">
@@ -358,14 +444,14 @@ export function Editor() {
                     <Button
                       variant="primary"
                       icon="plus"
-                      onClick={() => createFile('index.html', '<!DOCTYPE html>\n<html>\n<head>\n  <title>My Project</title>\n</head>\n<body>\n  <h1>Hello World!</h1>\n</body>\n</html>')}
+                      onClick={() => handleFileCreate('index.html', '<!DOCTYPE html>\n<html>\n<head>\n  <title>My Project</title>\n</head>\n<body>\n  <h1>Hello World!</h1>\n</body>\n</html>')}
                     >
                       Create HTML File
                     </Button>
                     <Button
                       variant="secondary"
                       icon="file"
-                      onClick={() => createFile('script.js', '// JavaScript code\nconsole.log(\"Hello, World!\");')}
+                      onClick={() => handleFileCreate('script.js', '// JavaScript code\nconsole.log("Hello, World!");')}
                     >
                       Create JS File
                     </Button>
@@ -380,10 +466,10 @@ export function Editor() {
             showPreview ? 'w-1/2 opacity-100' : 'w-0 opacity-0 overflow-hidden'
           }`}>
             {showPreview && (
-              <PreviewRunner 
+              <PreviewRunner
                 files={Object.fromEntries(
                   Object.entries(fileBuffers).map(([path, content]) => [
-                    path, 
+                    path,
                     { content, type: files[path]?.type || 'text/plain' }
                   ])
                 )}

@@ -12,7 +12,7 @@ export interface MonacoEditorProps {
   filename?: string;
   readOnly?: boolean;
   onSave?: () => void;
-  navigateToLine?: number;
+  navigateTarget?: { line: number; token: number } | null;
 }
 
 export function MonacoEditor({
@@ -22,10 +22,12 @@ export function MonacoEditor({
   filename,
   readOnly = false,
   onSave,
-  navigateToLine
+  navigateTarget
 }: MonacoEditorProps) {
   const editorRef = useRef<any>(null);
   const currentTheme = getTheme();
+  const highlightDecorations = useRef<string[]>([]);
+  const highlightTimeoutRef = useRef<number | null>(null);
 
   // Infer language from filename if not provided
   const editorLanguage = language || (filename ? inferLanguageFromExtension(filename) : 'plaintext');
@@ -132,12 +134,47 @@ export function MonacoEditor({
 
   // Navigate to specific line when requested
   useEffect(() => {
-    if (editorRef.current && navigateToLine && navigateToLine > 0) {
-      editorRef.current.revealLineInCenter(navigateToLine);
-      editorRef.current.setPosition({ lineNumber: navigateToLine, column: 1 });
+    if (editorRef.current && navigateTarget && navigateTarget.line > 0) {
+      const monaco = (window as any).monaco;
+      if (!monaco) return;
+
+      editorRef.current.revealLineInCenter(navigateTarget.line);
+      editorRef.current.setPosition({ lineNumber: navigateTarget.line, column: 1 });
       editorRef.current.focus();
+
+      highlightDecorations.current = editorRef.current.deltaDecorations(
+        highlightDecorations.current,
+        [
+          {
+            range: new monaco.Range(navigateTarget.line, 1, navigateTarget.line, 1),
+            options: {
+              isWholeLine: true,
+              className: 'cocode-editor-search-highlight',
+            },
+          },
+        ],
+      );
+
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        if (editorRef.current) {
+          highlightDecorations.current = editorRef.current.deltaDecorations(highlightDecorations.current, []);
+        }
+        highlightTimeoutRef.current = null;
+      }, 2000);
     }
-  }, [navigateToLine]);
+  }, [navigateTarget]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="h-full w-full">

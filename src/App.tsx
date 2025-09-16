@@ -12,6 +12,7 @@ import { Button } from './ui/Button';
 import { Icon } from './ui/Icon';
 import { toggleTheme } from './theme/theme';
 import { useAuth } from './hooks/useAuth';
+import { CoCodeLogo } from './components/CoCodeLogo';
 
 function App() {
   const { user, profile, loading } = useAuth();
@@ -73,12 +74,10 @@ function HomePage() {
       <div className="max-w-2xl mx-auto text-center space-y-8">
         {/* Logo and Branding */}
         <div className="space-y-4">
-          <div className="w-24 h-24 mx-auto bg-accent rounded-2xl flex items-center justify-center">
-            <Icon name="code" size="xl" className="text-white" />
-          </div>
+          <CoCodeLogo size="lg" showWordmark className="justify-center" />
           <div>
-            <h1 className="text-4xl font-bold text-fg mb-2">CoCode</h1>
-            <p className="text-xl text-muted">Collaborative Code Editor</p>
+            <h1 className="text-4xl font-bold text-fg mb-2">Collaborative Code Editor</h1>
+            <p className="text-xl text-muted">Build, preview, and share your projects together in real time.</p>
           </div>
         </div>
 
