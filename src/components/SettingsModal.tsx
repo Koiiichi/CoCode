@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
 import { useSettings } from '@/hooks/useSettings';
 import { AppSettings } from '@/lib/settings';
 
