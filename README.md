@@ -249,9 +249,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-* **Issues**: [GitHub Issues](https://github.com/yourusername/CoCode/issues)
-* **Discussions**: [GitHub Discussions](https://github.com/yourusername/CoCode/discussions)
-* **Documentation**: [Wiki](https://github.com/yourusername/CoCode/wiki)
+* **Issues**: [GitHub Issues](https://github.com/koiiichi/CoCode/issues)
+* **Discussions**: [GitHub Discussions](https://github.com/koiiichi/CoCode/discussions)
+* **Documentation**: [Wiki](https://github.com/koiiichi/CoCode/wiki)
 
 ---
 
