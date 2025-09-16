@@ -42,6 +42,10 @@
   .monaco-container .monaco-editor {
     @apply h-full w-full;
   }
+
+  .monaco-editor .cocode-editor-search-highlight {
+    background-color: rgba(56, 189, 248, 0.18);
+  }
   
   /* Custom scrollbar */
   .custom-scrollbar {

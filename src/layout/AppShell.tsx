@@ -15,6 +15,7 @@ export interface AppShellProps {
   fileTree?: FileItem[];
   selectedFile?: string | null;
   openTabs?: string[];
+  dirtyFiles?: Set<string>;
   onFileSelect?: (filePath: string) => void;
   onTabClose?: (filePath: string) => void;
   onFileCreate?: (path: string, content?: string) => Promise<boolean>;
@@ -34,6 +35,7 @@ export function AppShell({
   fileTree,
   selectedFile,
   openTabs = [],
+  dirtyFiles,
   onFileSelect,
   onTabClose,
   onFileCreate,
@@ -74,14 +76,14 @@ export function AppShell({
         <div className="flex-1 flex flex-col min-w-0">
           {/* Tab Bar */}
           {showTabBar && (
-            <TabBar 
+            <TabBar
               tabs={openTabs.map(path => ({
                 id: path,
                 name: path.split('/').pop() || path,
                 path: path,
                 language: files?.[path]?.type,
                 isActive: selectedFile === path,
-                isDirty: false // TODO: Track dirty state
+                isDirty: dirtyFiles?.has(path)
               }))}
               onTabClick={(tab) => onFileSelect?.(tab.path)}
               onTabClose={(tab) => onTabClose?.(tab.path)}

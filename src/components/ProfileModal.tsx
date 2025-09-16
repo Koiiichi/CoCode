@@ -1,5 +1,6 @@
 // CoCode Profile Modal Component
 
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +13,7 @@ interface ProfileModalProps {
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -19,14 +21,16 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     try {
       await signOut();
       onClose();
+      navigate('/auth/login');
     } catch (error) {
       console.error('Sign out failed:', error);
+      alert('Unable to sign out right now. Please try again.');
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-bg/95 backdrop-blur-xl border border-border/50 shadow-2xl p-6 rounded-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex justify-center items-center sm:pt-0 pt-24 z-50 px-4 pb-6">
+      <div className="w-full max-w-md rounded-2xl border border-border/40 bg-bg/85 shadow-2xl backdrop-blur-2xl p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-fg">Profile</h2>

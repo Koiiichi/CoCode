@@ -30,3 +30,19 @@ googleProvider.addScope('profile');
 googleProvider.addScope('email');
 
 githubProvider.addScope('user:email');
+
+const googleClientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID;
+if (googleClientId) {
+  googleProvider.setCustomParameters({
+    prompt: 'select_account',
+    client_id: googleClientId,
+  });
+}
+
+const githubClientId = import.meta.env.VITE_GITHUB_OAUTH_CLIENT_ID;
+if (githubClientId) {
+  githubProvider.setCustomParameters({
+    allow_signup: 'true',
+    client_id: githubClientId,
+  });
+}

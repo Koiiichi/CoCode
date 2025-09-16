@@ -6,6 +6,7 @@ import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { ProfileModal } from '@/components/ProfileModal';
 import { SettingsModal } from '@/components/SettingsModal';
+import { CoCodeLogo } from '@/components/CoCodeLogo';
 import { exportProject, importFiles, downloadBlob } from '@/lib/importExport';
 import type { FileItem } from '@/hooks/useFiles';
 import { toggleTheme, getTheme } from '@/theme/theme';
@@ -121,12 +122,7 @@ export function TopBar({ projectName, files, onImport }: TopBarProps) {
   return (
     <div className="h-12 glass border-b border-border flex items-center justify-between px-4 z-50">
       {/* Left: Logo and Branding */}
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
-          <Icon name="code" size="sm" className="text-white" />
-        </div>
-        <span className="font-semibold text-lg text-fg">CoCode</span>
-      </div>
+      <CoCodeLogo showWordmark className="text-lg" />
 
       {/* Center: Breadcrumb Navigation */}
       <div className="flex-1 flex justify-center">

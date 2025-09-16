@@ -51,6 +51,19 @@ export function Console({ messages, onClear }: ConsoleProps) {
     }
   };
 
+  const getBadgeClasses = (type: ConsoleMessage['type']) => {
+    switch (type) {
+      case 'error':
+        return 'bg-red-500/15 text-red-300 border-red-500/30';
+      case 'warn':
+        return 'bg-yellow-500/15 text-yellow-200 border-yellow-500/30';
+      case 'info':
+        return 'bg-blue-500/15 text-blue-200 border-blue-500/30';
+      default:
+        return 'bg-accent/10 text-accent border-accent/30';
+    }
+  };
+
   const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString();
   };
@@ -114,8 +127,18 @@ export function Console({ messages, onClear }: ConsoleProps) {
                     className={cn('mt-0.5 flex-shrink-0', getMessageColor(message.type))}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className={cn('text-sm font-mono', getMessageColor(message.type))}>
-                      {message.content}
+                    <div className="flex items-start gap-2 flex-wrap mb-1">
+                      <span
+                        className={cn(
+                          'text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded-full border',
+                          getBadgeClasses(message.type)
+                        )}
+                      >
+                        {message.type.toUpperCase()}
+                      </span>
+                      <div className={cn('text-sm font-mono whitespace-pre-wrap break-words', getMessageColor(message.type))}>
+                        {message.content}
+                      </div>
                     </div>
                     <div className="text-xs text-muted mt-1">
                       {formatTimestamp(message.timestamp)}

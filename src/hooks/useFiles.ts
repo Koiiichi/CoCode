@@ -137,8 +137,11 @@ export function useFiles(projectId: string | null): UseFilesReturn {
         updatedBy: user.uid,
       };
       
-      setFiles(prevFiles => ({ ...prevFiles, [path]: newFile }));
-      setFileTree(() => buildFileTree({ ...files, [path]: newFile }));
+      setFiles(prevFiles => {
+        const updated = { ...prevFiles, [path]: newFile };
+        setFileTree(buildFileTree(updated));
+        return updated;
+      });
       
       return true;
     } catch (err) {
@@ -168,17 +171,16 @@ export function useFiles(projectId: string | null): UseFilesReturn {
       for (const filePath of filesToDelete) {
         await deleteFile(user.uid, projectId, filePath);
       }
-      
+
       // Update local state
       setFiles(prevFiles => {
         const updated = { ...prevFiles };
         filesToDelete.forEach(filePath => {
           delete updated[filePath];
         });
+        setFileTree(buildFileTree(updated));
         return updated;
       });
-      
-      setFileTree(() => buildFileTree(files));
       
       return true;
     } catch (err) {
@@ -224,21 +226,8 @@ export function useFiles(projectId: string | null): UseFilesReturn {
           type: inferLanguageFromExtension(newPath),
           updatedAt: Date.now(),
         };
+        setFileTree(buildFileTree(updated));
         return updated;
-      });
-      
-      // Rebuild file tree with updated files
-      setFileTree(() => {
-        const updatedFiles = { ...files };
-        delete updatedFiles[oldPath];
-        updatedFiles[newPath] = {
-          ...fileData,
-          path: newPath,
-          name: newPath.split('/').pop() || newPath,
-          type: inferLanguageFromExtension(newPath),
-          updatedAt: Date.now(),
-        };
-        return buildFileTree(updatedFiles);
       });
       
       return true;
@@ -278,10 +267,13 @@ function buildFileTree(files: Record<string, FileItem>): FileItem[] {
   sortedPaths.forEach(path => {
     const parts = path.split('/');
     const file = files[path];
-    
+    const isPlaceholder = file.name === '.gitkeep';
+
     if (parts.length === 1) {
       // Root level file
-      tree.push(file);
+      if (!isPlaceholder) {
+        tree.push(file);
+      }
     } else {
       // Nested file - create folder structure
       let currentLevel = tree;
@@ -311,7 +303,9 @@ function buildFileTree(files: Record<string, FileItem>): FileItem[] {
       }
       
       // Add the file to the final folder
-      currentLevel.push(file);
+      if (!isPlaceholder) {
+        currentLevel.push(file);
+      }
     }
   });
 

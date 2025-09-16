@@ -6,6 +6,7 @@ import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { signInWithEmail, signInWithGoogle, signInWithGithub } from '@/firebase/auth';
 import { cn } from '@/lib/utils';
+import { CoCodeLogo } from '@/components/CoCodeLogo';
 
 export function Login() {
   const [formData, setFormData] = useState({
@@ -67,12 +68,12 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-bg p-4">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Icon name="code" size="lg" className="text-white" />
+        <div className="text-center mb-8 space-y-4">
+          <CoCodeLogo size="md" showWordmark className="justify-center mx-auto" />
+          <div>
+            <h1 className="text-2xl font-bold text-fg mb-2">Welcome back</h1>
+            <p className="text-muted">Sign in to your CoCode account</p>
           </div>
-          <h1 className="text-2xl font-bold text-fg mb-2">Welcome back</h1>
-          <p className="text-muted">Sign in to your CoCode account</p>
         </div>
 
         {/* Login Form */}
