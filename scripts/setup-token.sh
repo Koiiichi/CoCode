@@ -41,17 +41,36 @@ chmod 700 "$TOKEN_DIR/get-token.sh"
 echo "Token securely stored. You can now use scripts that require authorization."
 echo "Token will be retrieved using the secure method."
 
-# Auto-export token in shell profile
+# Auto-export token in shell profile (only for CoCode repo)
 SHELL_PROFILE="$HOME/.bashrc"  # Change to .zshrc if using Zsh
 
-EXPORT_LINE='export GIT_SCRIPT_MASTER_TOKEN=$(~/.git-script-auth/get-token.sh)'
+# Get the absolute path of the CoCode repository
+COCODE_REPO_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if ! grep -Fxq "$EXPORT_LINE" "$SHELL_PROFILE"; then
-  echo "$EXPORT_LINE" >> "$SHELL_PROFILE"
-  echo "Token will now auto-load in every terminal session via $SHELL_PROFILE"
+# Create a conditional export that only runs in the CoCode directory
+EXPORT_BLOCK="# CoCode Git Script Token - Only loads in CoCode repository
+if [[ \"\$PWD\" == \"$COCODE_REPO_PATH\"* ]]; then
+  if [[ -z \"\$GIT_SCRIPT_MASTER_TOKEN\" ]]; then
+    export GIT_SCRIPT_MASTER_TOKEN=\$(~/.git-script-auth/get-token.sh 2>/dev/null)
+  fi
+fi"
+
+# Check if the old line exists and needs to be replaced
+OLD_EXPORT_LINE='export GIT_SCRIPT_MASTER_TOKEN=$(~/.git-script-auth/get-token.sh)'
+if grep -Fxq "$OLD_EXPORT_LINE" "$SHELL_PROFILE" 2>/dev/null; then
+  # Remove old line
+  sed -i "\|$OLD_EXPORT_LINE|d" "$SHELL_PROFILE" 2>/dev/null || grep -v "$OLD_EXPORT_LINE" "$SHELL_PROFILE" > "$SHELL_PROFILE.tmp" && mv "$SHELL_PROFILE.tmp" "$SHELL_PROFILE"
+  echo "Removed old global token export from $SHELL_PROFILE"
+fi
+
+# Add new conditional block if not present
+if ! grep -q "CoCode Git Script Token" "$SHELL_PROFILE" 2>/dev/null; then
+  echo "" >> "$SHELL_PROFILE"
+  echo "$EXPORT_BLOCK" >> "$SHELL_PROFILE"
+  echo "Token will now only load when in the CoCode directory via $SHELL_PROFILE"
   echo "Run: source $SHELL_PROFILE"
 else
-  echo "Token export already exists in $SHELL_PROFILE"
+  echo "Conditional token export already exists in $SHELL_PROFILE"
 fi
 
 # Create authorized.flag for trusted local usage

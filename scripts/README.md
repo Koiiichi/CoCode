@@ -14,7 +14,15 @@ All scripts include a local authorization mechanism:
 
 **Token Setup**:
 ```bash
-./setup.token.sh  # Only authorized users can run this
+./setup-token.sh  # Only authorized users can run this
+```
+
+**Note**: The token is automatically loaded only when you're in the CoCode repository directory. This prevents the GPG passphrase prompt from appearing in every terminal session globally.
+
+**Fix Existing Installation**:
+If you previously ran `setup-token.sh` and are getting passphrase prompts globally, run:
+```bash
+./fix-bashrc.sh  # Removes global export and adds repo-specific check
 ```
 
 ---
